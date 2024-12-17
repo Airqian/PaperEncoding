@@ -1,28 +1,32 @@
-package experiment.ex2;
-
-
+package experiment.ex3;
 
 import DataHandler.TempralGraphDataHandler.DataSetReader;
-import DataHandler.TempralGraphDataHandler.IndexTreeBuilder;
+import encoding.PPBitset;
+import encoding.PropertyEncodingConstructor;
+import experiment.ex3.btree.BPlusTree;
+import indextree.hyperedge.DataHyperedge;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
 
-/**
- * 实验二测试索引树构建时间，其中固定 hashFuncCount = 2。
- * nProperty = 1..6，encodingLength = {50,75,100,125,150,175}
- */
-public class BuildTimeWithArguments {
+public class BPlusTreeBuilder {
     public static void main(String[] args) {
-        String dataset = args[0];
-        int nProperty = Integer.valueOf(args[1]);
+        Map<String, Integer> encodingLengthMap = new HashMap<>();
+        encodingLengthMap.put("NDC-classes", 90);
+        encodingLengthMap.put("NDC-substances", 100);
+        encodingLengthMap.put("congress-bills", 120);
+        encodingLengthMap.put("tags-ask-ubuntu", 90);
+        encodingLengthMap.put("coauth-MAG-Geology", 83);
+        encodingLengthMap.put("coauth-DBLP", 84);
 
-        String srcSata = "../src/dataset/temporal-restricted/";
+        // 数据集信息
+        String dataset = "coauth-DBLP";
+        String srcSata = "src/dataset/temporal-restricted/";
         String hyperedgeIdFile = srcSata + dataset + "/hyperedge-id-unique.txt";
         String hyperedgeLabelFile = srcSata + dataset + "/hyperedge-label-unique.txt";
-        String propertyFile = srcSata  + dataset + "/node-property" + nProperty + ".txt";
-        String treeInfo = "./classes/experiment/ex1/files/" + dataset + "-TreeInfo.txt";
+        String propertyFile = srcSata  + dataset + "/node-property3.txt";
+        String outputFile = "src/experiment/ex3/indexFile/" + dataset + "-BPlusTree.txt";
 
         // 构建索引树数据集信息
         List<long[]> idToTime = DataSetReader.getAllEdgeTimeASC(hyperedgeIdFile); // 将超边按照时间升序排序
@@ -30,46 +34,45 @@ public class BuildTimeWithArguments {
         Map<String, String> idMap = DataSetReader.getEdgeIdMap(hyperedgeIdFile); // 超边id到整条超边的映射（包含顶点id以及属性）
         Map<String, String> labelMap = DataSetReader.getEdgeLabelMap(hyperedgeLabelFile); // 超边标签到整条超边的映射（包含顶点label以及属性）
 
-        // 构建索引树所需要的参数
-        int windowSize = 128;
+        // 编码相关信息
+        int encodingLength = encodingLengthMap.get(dataset);
         int hashFuncCount = 2;
-        int secondaryIndexSize = 8;
-        int minInternalNodeChilds = 15;
-        int maxInternalNodeChilds = 15;
 
-        // 代码预热，做JIT优化
-        for (int i = 0; i < 20; i++) {
-            IndexTreeBuilder.buildWithoutFileIOTime(idToTime, proMap, idMap, labelMap,
-                    windowSize, 50, hashFuncCount, minInternalNodeChilds,
-                    maxInternalNodeChilds, secondaryIndexSize, false);
-        }
-//        System.gc(); // 显式调用 GC，减少干扰
+        // b+树
+        long sum = 0;
+        for (int k = 0; k < 5; k++) {
+            long start = System.currentTimeMillis();
 
-        // 跑十遍，去掉最高值和最低值，取平均值
-        // 50,75,100,125,150, 175
-        int[] arr = new int[]{50,75,100,125,150,175};
-        for (int i = 0; i < arr.length; i++) {
-            long[] times = new long[10]; // 测量 10 次
-            System.out.println("编码长度：" + arr[i]);
+            int order = 128;
+            BPlusTree<DataHyperedge, Long> bPlusTree = new BPlusTree<>(order);
+            for (int i = 0; i < idToTime.size(); i++) {
+                long edgeId = idToTime.get(i)[0];   // 超边id
+                long edgeTime = idToTime.get(i)[1]; // 超边时间
+                String edgeIdDetail = idMap.get(String.valueOf(edgeId)); // 整条超边详情
+                String[] items = edgeIdDetail.split("\\t");
 
-            for (int j = 0; j < 10; j++) {
-                long start = System.nanoTime();
-                IndexTreeBuilder.buildWithoutFileIOTime(idToTime, proMap, idMap, labelMap,
-                        windowSize, arr[i], hashFuncCount, minInternalNodeChilds,
-                        maxInternalNodeChilds, secondaryIndexSize, false);
-                long end = System.nanoTime();
-                times[j] = end - start;
+                DataHyperedge hyperedge = new DataHyperedge(Long.valueOf(edgeId), edgeTime, encodingLength);
+                // 对该超边中包含的所有顶点的所有属性进行编码，合成超边编码
+                PPBitset bitset = new PPBitset(encodingLength);
+                for (int j = 1; j < items.length - 1; j++) {
+                    String vertexId = items[j];
+                    hyperedge.addVertexId(Long.valueOf(vertexId));
+                    for (String prop : proMap.get(vertexId)) {
+                        PPBitset tmp = PropertyEncodingConstructor.encoding(prop, encodingLength, hashFuncCount);
+                        bitset.or(tmp);
+                    }
+                }
+
+                hyperedge.setEncoding(bitset);
+                bPlusTree.insertOrUpdate(hyperedge, edgeId);
             }
 
-            Arrays.sort(times);
-            long sum = 0;
-            for (int k = 1; k < times.length - 1; k++) {
-                sum += times[k];
-            }
-            long avg = sum / (times.length - 2);
-            System.out.println("索引树构建的平均时间（毫秒）：" + avg / 1_000_000);
-            System.out.println();
+            long end = System.currentTimeMillis();
+            sum += (end - start);
+            System.out.println("第" + (k+1) + "次构建时间为：" + (end - start));
         }
+        System.out.println("平均构建时间为：" + (sum * 1.0 / 5));
+//        bPlusTree.printBPlusTree(outputFile);
     }
 
     private static Map<String, String> getEdgeIdMap(String hyperedgeIdFile) {

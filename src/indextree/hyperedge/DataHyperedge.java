@@ -42,6 +42,7 @@ public class DataHyperedge extends Hyperedge implements Comparable<DataHyperedge
         return diff;
     }
 
+    // 超边的比较方法，先比较编码再比较时间
     @Override
     public int compareTo(DataHyperedge o) {
         if (!this.getEncoding().equals(o.getEncoding()))

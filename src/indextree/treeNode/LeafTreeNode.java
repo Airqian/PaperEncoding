@@ -44,20 +44,20 @@ public class LeafTreeNode extends TreeNode {
      * 在构造索引树时，我们应首先获取相同主体事件的最早和最晚时间，根据这两个时间切分时间窗口，以尽量平均每个时间窗口含有的编码数。
      * 整体的逻辑是，先看该时间范围内有多少个不同的主体属性，对这些主体属性进行分组
      *
-     * @param dataHyperedge
+     * @param addedEdge
      */
-    public boolean addHyperedge(DataHyperedge dataHyperedge) {
-        if (dataHyperedge.getEdgeTime() < getStartTime() || dataHyperedge.getEdgeTime() > getEndTime())
+    public boolean addHyperedge(DataHyperedge addedEdge) {
+        if (addedEdge.getEdgeTime() < getStartTime() || addedEdge.getEdgeTime() > getEndTime())
             throw new RuntimeException("The occurrence time of the event to be inserted is not within the time window.");
 
         if (!isFull()) {
-            int index = binarySort(dataHyperedge);
-            dataHyperedges.add(index, dataHyperedge);
+            int index = binarySort(addedEdge);
+            dataHyperedges.add(index, addedEdge);
 
             // 更新本节点的seed、cardinality以及globalbits
-            updateSeedAndCardinality(dataHyperedge);
-            updateTopHyperedge(dataHyperedge);
-            updateParent(dataHyperedge);
+            updateSeedAndCardinality(addedEdge);
+            updateTopHyperedge(addedEdge);
+            updateParent(addedEdge);
 
             return true;
         }
@@ -130,19 +130,23 @@ public class LeafTreeNode extends TreeNode {
         }
     }
 
-    public String printEdges() {
+    public String printEdges(boolean openSecondaryIndex) {
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < secondaryBitsets.size(); i++) {
-            PPBitset secondaryBitset = secondaryBitsets.get(i);
-            builder.append("secondaryBitset：").append(secondaryBitset.toString()).append("\n");
 
-            for (int j = i * secondaryIndexSize; j < Math.min(dataHyperedges.size(), (i + 1) * secondaryIndexSize); j++) {
-                builder.append(dataHyperedges.get(j).printEncoding()).append("\n");
+        if (openSecondaryIndex) {
+            for (int i = 0; i < secondaryBitsets.size(); i++) {
+                PPBitset secondaryBitset = secondaryBitsets.get(i);
+                builder.append("secondaryBitset：").append(secondaryBitset.toString()).append("\n");
+
+                for (int j = i * secondaryIndexSize; j < Math.min(dataHyperedges.size(), (i + 1) * secondaryIndexSize); j++) {
+                    builder.append(dataHyperedges.get(j).printEncoding()).append("\n");
+                }
+            }
+        } else {
+            for (Hyperedge hyperedge : dataHyperedges) {
+                builder.append(hyperedge.printEncoding()).append("\n");
             }
         }
-//        for (Hyperedge hyperedge : dataHyperedges) {
-//            builder.append(hyperedge.printEncoding()).append("\n");
-//        }
         return builder.toString();
     }
 

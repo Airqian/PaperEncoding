@@ -1,4 +1,4 @@
-package experiment.ex3;
+package experiment.ex3.btree;
 
 /**
  * B+树的定义：
@@ -16,8 +16,8 @@ package experiment.ex3;
 
 /**
  * 对于超图b+树来说，需要先按编码比较再按编码时间进行比较
- * K 是编码和时间
- * V 是超边
+ * K 是编码和时间（DataHyperedge）
+ * V 是超边id
  */
 @SuppressWarnings("all")
 public class BPlusTree<K extends Comparable<K>, V> {
@@ -87,7 +87,11 @@ public class BPlusTree<K extends Comparable<K>, V> {
         head = root;
     }
 
-    public void printBPlusTree() {
-        this.root.printBPlusTree(0);
+    public void printBPlusTree(String outputFile) {
+        this.root.printBPlusTree(0, outputFile);
+    }
+
+    public void printBPlusTreeRaw() {
+        this.root.printBPlusTreeRaw(0);
     }
 }

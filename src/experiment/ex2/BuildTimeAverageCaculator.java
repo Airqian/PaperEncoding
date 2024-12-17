@@ -19,7 +19,7 @@ public class BuildTimeAverageCaculator {
         List<long[]> idToTime = getAllEdgeTimeASC(hyperedgeIdFile); // 将超边按照时间升序排序
         Map<String, List<String>> proMap = getId2PropertyMap(propertyFile); // 顶点到属性的映射
         Map<String, String> idMap = getEdgeIdMap(hyperedgeIdFile); // 超边id到整条超边的映射（包含顶点id以及属性）
-        Map<String, String> labelMap = getEdgeLabelMap(hyperedgeLabelFile); // 超边id到整条超边的映射（包含顶点label以及属性）
+        Map<String, String> labelMap = getEdgeLabelMap(hyperedgeLabelFile); // 超边标签到整条超边的映射（包含顶点label以及属性）
 
         // 构建索引树所需要的参数
         int windowSize = 128;
@@ -32,7 +32,7 @@ public class BuildTimeAverageCaculator {
         for (int i = 0; i < 20; i++) {
             IndexTreeBuilder.buildWithoutFileIOTime(idToTime, proMap, idMap, labelMap,
                     windowSize, 50, hashFuncCount, minInternalNodeChilds,
-                    maxInternalNodeChilds, secondaryIndexSize, treeInfo, false);
+                    maxInternalNodeChilds, secondaryIndexSize, false);
         }
 //        System.gc(); // 显式调用 GC，减少干扰
 
@@ -47,7 +47,7 @@ public class BuildTimeAverageCaculator {
                 long start = System.nanoTime();
                 IndexTreeBuilder.buildWithoutFileIOTime(idToTime, proMap, idMap, labelMap,
                         windowSize, arr[i], hashFuncCount, minInternalNodeChilds,
-                        maxInternalNodeChilds, secondaryIndexSize, treeInfo, false);
+                        maxInternalNodeChilds, secondaryIndexSize, false);
                 long end = System.nanoTime();
                 times[j] = end - start;
             }

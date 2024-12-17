@@ -15,16 +15,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static experiment.ex1.RandomHyperedgeSelector.NUM_EDGE_PER_GROUP;
+import static experiment.ex1.RandomUniqueVertexSelector.NUM_EDGE_PER_GROUP;
 
 public class Main {
     public static void main(String[] args) {
-        final int nProperty = 1;
-        String hyperedgeIdFile = "src/dataset/temporal-restricted/congress-bills/hyperedge-id-unique.txt";
-        String hyperedgeLabelFile = "src/dataset/temporal-restricted/congress-bills/hyperedge-label-unique.txt";
-        String propertyFile = "src/dataset/temporal-restricted/congress-bills/node-property" + nProperty + ".txt";
-        String queryFile = "src/experiment/ex1/files/congress-bills-selectedEdges.txt";
-        String treeInfo = "srcexperiment/ex1/files/congress-bills-TreeInfo.txt";
+        String dataset = "coauth-DBLP";
+        final int nProperty = 3;
+        String hyperedgeIdFile = "src/dataset/temporal-restricted/" + dataset + "/hyperedge-id-unique.txt";
+        String hyperedgeLabelFile = "src/dataset/temporal-restricted/" + dataset + "/hyperedge-label-unique.txt";
+        String propertyFile = "src/dataset/temporal-restricted/" + dataset + "/node-property" + nProperty + ".txt";
+        String queryFile = "src/experiment/ex1/files/" + dataset + "-selectedEdges.txt";
+        String treeInfo = "src/experiment/ex1/files/" + dataset + "-TreeInfo.txt";
 
         // 构建索引树所需要的参数
         int windowSize = 128;
@@ -35,12 +36,12 @@ public class Main {
         Map<String, List<String>> proMap = getId2PropertyMap(propertyFile);
 
 
-        int[] arr = new int[]{50};
+        int[] arr = new int[]{80,90,100,110,120,130,140,150,160};
         for (int i = 0; i < arr.length; i++) {
             System.out.println("编码长度：" + arr[i]);
             IndexTree indexTree = IndexTreeBuilder.build(hyperedgeIdFile, hyperedgeLabelFile, propertyFile,
                     windowSize, arr[i], hashFuncCount, minInternalNodeChilds,
-                    maxInternalNodeChilds, secondaryIndexSize, treeInfo, false);
+                    maxInternalNodeChilds, secondaryIndexSize, false);
             query(indexTree, queryFile, proMap);
 
             System.out.println();
@@ -48,73 +49,8 @@ public class Main {
 
     }
 
-    public static void queryParallel(IndexTree indexTree, String queryFile, Map<String, List<String>> proMap) {
-        // 获取文件中的所有超边，并计算好编码
-        BufferedReader bufferedReader;
-        List<DataHyperedge> dataHyperedges = new ArrayList<>();
 
-        try {
-            bufferedReader = new BufferedReader(new FileReader(new File(queryFile)));
-            String line;
-
-            int encodingLength = indexTree.getEncodingLength();
-            int hashFuncCount = indexTree.getHashFuncCount();
-
-            while ((line = bufferedReader.readLine()) != null) {
-                String[] items = line.split("\\t");
-                long time = Long.parseLong(items[items.length - 1]);
-                DataHyperedge hyperedge = new DataHyperedge(time, encodingLength);
-
-                // 对该超边中包含的所有顶点的所有属性进行编码，合成超边编码
-                PPBitset bitset = new PPBitset(encodingLength);
-                for (int j = 1; j < items.length - 1; j++) {
-                    String vertexId = items[j];
-                    hyperedge.addVertexId(Long.valueOf(vertexId));
-                    for (String prop : proMap.get(vertexId)) {
-                        PPBitset tmp = PropertyEncodingConstructor.encoding(prop, encodingLength, hashFuncCount);
-                        bitset.or(tmp);
-                    }
-                }
-                hyperedge.setEncoding(bitset);
-                dataHyperedges.add(hyperedge);
-            }
-
-            bufferedReader.close();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // 并行处理
-        int numProcessors = Runtime.getRuntime().availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(numProcessors);
-
-        List<Future<Integer>> futureResults = new ArrayList<>();
-
-        for (int i = 0; i < dataHyperedges.size() / NUM_EDGE_PER_GROUP; i++) {
-            int start = i * NUM_EDGE_PER_GROUP;
-            int end = Math.min((i + 1) * NUM_EDGE_PER_GROUP, dataHyperedges.size());
-
-            futureResults.add(executor.submit(() -> {
-                int sum = 0;
-                for (int j = start; j < end; j++) {
-                    sum += indexTree.singleEdgeSearchWithSecondaryIndex(dataHyperedges.get(j)).size();
-                }
-                return sum;
-            }));
-        }
-
-        // 收集结果并打印
-        try {
-            for (int i = 0; i < futureResults.size(); i++) {
-                System.out.println("组别 " + i + " 的总候选数：" + futureResults.get(i).get());
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        } finally {
-            executor.shutdown();
-        }
-    }
-
+    // 按组别进行查询即可
     public static void query(IndexTree indexTree, String queryFile, Map<String, List<String>> proMap) {
         // 获取文件中的所有超边，并计算好编码
         BufferedReader bufferedReader;

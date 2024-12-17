@@ -10,6 +10,7 @@ import indextree.treeNode.TreeNode;
 import indextree.util.DataSetInfo;
 import indextree.util.Event;
 
+import java.math.BigInteger;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -53,7 +54,7 @@ public class IndexTree {
      * @param proMap 超边id到整条超边的映射（包含顶点label以及属性）
      */
     public void buildTemporalHypergraphTree(List<long[]> idToTime, Map<String, String> idMap, Map<String, String> labelMap,
-                                            Map<String, List<String>> proMap, String outputFile, boolean openSecondaryIndex) {
+                                            Map<String, List<String>> proMap, boolean openSecondaryIndex) {
         // 构造叶子层
         Queue<TreeNode> treeNodes = new ArrayDeque<>();
         LeafTreeNode leafTreeNode = new LeafTreeNode(windowSize, encodingLength, secondaryIndexSize);
@@ -132,8 +133,6 @@ public class IndexTree {
                 treeNode2 = new ArrayDeque<>();
             }
         }
-
-//        printTree(outputFile);
     }
 
     /**
@@ -223,8 +222,6 @@ public class IndexTree {
                 treeNodes2 = new ArrayDeque<>();
             }
         }
-
-        printTree(SHOPPIONG_TREE_IOFO);
     }
 
     // 从根节点开始找到符合条件的叶子节点（使用二级索引）
@@ -233,6 +230,7 @@ public class IndexTree {
         Queue<TreeNode> queue1 = new ArrayDeque<>();
         Queue<TreeNode> queue2 = new ArrayDeque<>();
 
+        // 先把所有可能符合的叶节点找出来
         queue1.offer(root);
         while (!queue1.isEmpty()) {
             if (queue1.peek() instanceof LeafTreeNode)
@@ -252,6 +250,7 @@ public class IndexTree {
             }
         }
 
+        // 在叶节点中查找编码
         List<Long> res = new LinkedList<>();
         while (!queue1.isEmpty()) {
             LeafTreeNode leafTreeNode = (LeafTreeNode) queue1.poll();
@@ -282,6 +281,7 @@ public class IndexTree {
         Queue<TreeNode> queue1 = new ArrayDeque<>();
         Queue<TreeNode> queue2 = new ArrayDeque<>();
 
+        // 先把所有可能符合的叶节点找出来
         queue1.offer(root);
         while (!queue1.isEmpty()) {
             if (queue1.peek() instanceof LeafTreeNode)
@@ -301,10 +301,13 @@ public class IndexTree {
             }
         }
 
+        // 在叶节点中可以使用二分法查找
         List<Long> res = new LinkedList<>();
         while (!queue1.isEmpty()) {
             LeafTreeNode leafTreeNode = (LeafTreeNode) queue1.poll();
+
             for (DataHyperedge edge : leafTreeNode.getHyperedges()) {
+                BigInteger bigInteger = edge.getEncoding().toBigInteger();
                 if (dataHyperedge.isBitwiseSubset(edge))
                     res.add(edge.getId());
             }
@@ -423,13 +426,13 @@ public class IndexTree {
 //    }
 
     // 从根节点开始打印树
-    public void printTree(String treeInfoFilePath) {
+    public void printTree(String treeInfoFilePath, boolean openSecondaryIndex) {
         Queue<TreeNode> treeNodes = new ArrayDeque<>();
         treeNodes.offer(this.root);
 
         while (!treeNodes.isEmpty()) {
             TreeNode node = treeNodes.poll();
-            node.print(treeInfoFilePath);
+            node.print(treeInfoFilePath, openSecondaryIndex);
 
             if (node instanceof InternalTreeNode) {
                 for (TreeNode child : ((InternalTreeNode) node).getChildNodes())

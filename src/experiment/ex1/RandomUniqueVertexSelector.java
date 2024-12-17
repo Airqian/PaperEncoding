@@ -4,10 +4,13 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class RandomHyperedgeSelector {
-    private final static String DATA_FILE = "src/dataset/temporal-restricted/tags-stack-overflow/hyperedge-id-unique.txt";
+// 生成特定顶点个数的超边
+public class RandomUniqueVertexSelector {
+    private final static String dataset = "coauth-DBLP";
+    private final static String DATA_FILE = "src/dataset/temporal-restricted/" + dataset + "/hyperedge-id-unique.txt";
 
-    private final static String OUTPUT_FILE = "src/experiment/ex1/files/tags-stack-overflow-selectedEdges.txt";
+
+    private final static String OUTPUT_FILE = "src/experiment/ex1/files/"+ dataset + "-selectedEdges.txt";
 
     public final static int NUM_EDGE_PER_GROUP = 10;
 
@@ -43,7 +46,7 @@ public class RandomHyperedgeSelector {
         // 3. 随机选择顶点数量为 5、6、7、8 的超边各 NUM_EDGE_PER_GROUP 条
         List<Hyperedge> selectedHyperedges = new ArrayList<>();
         Random random = new Random();
-        for (int vertexCount = 2; vertexCount <= 5; vertexCount++) {
+        for (int vertexCount = 5; vertexCount <= 8; vertexCount++) {
             System.out.println("vertexCount = " + vertexCount);
             List<Hyperedge> group = groupedByVertexCount.getOrDefault(vertexCount, new ArrayList<>());
             Collections.shuffle(group); // 打乱顺序

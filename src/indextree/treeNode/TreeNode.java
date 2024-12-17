@@ -132,7 +132,7 @@ public class TreeNode {
         }
     }
 
-    public void print(String treeInfoFilePath) {
+    public void print(String treeInfoFilePath, boolean openSecondaryIndex) {
         BufferedWriter writer;
 
         try {
@@ -141,17 +141,18 @@ public class TreeNode {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
             // 节点 id
-            builder.append("Node ID: ").append(this.id).append("\n");
+//            builder.append("Node ID: ").append(this.id).append("\n");
 
             // time range
-            builder.append("start time: ").append(format.format(new Date(startTime)))
-                    .append(", end time: ").append(format.format(new Date(endTime))).append("\n");
+//            builder.append("start time: ").append(format.format(new Date(startTime)))
+//                    .append(", end time: ").append(format.format(new Date(endTime))).append("\n");
 
             // tophyperedge
-            builder.append("TopHyperedge: ").append(this.topHyperedge.printEncoding()).append("\n");
+//            builder.append("TopHyperedge: ").append(this.topHyperedge.printEncoding()).append("\n");
 
             // 编码数据
-            builder.append(printEdges()).append("\n");
+//            builder.append(printEdges(openSecondaryIndex)).append("\n");
+            builder.append(printEdges(openSecondaryIndex));
 
             writer.write(builder.toString());
             writer.close();
@@ -161,7 +162,7 @@ public class TreeNode {
         }
     }
 
-    protected String printEdges() {
+    protected String printEdges(boolean openSecondaryIndex) {
         return "";
     }
 

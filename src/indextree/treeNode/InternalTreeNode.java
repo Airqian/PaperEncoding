@@ -63,7 +63,8 @@ public class InternalTreeNode extends TreeNode {
         }
     }
 
-    public String printEdges() {
+
+    public String printEdges(boolean openSecondaryIndex) {
         StringBuilder builder = new StringBuilder();
         for (Hyperedge hyperedge : derivedHyperedges) {
             builder.append(hyperedge.printEncoding()).append("\n");

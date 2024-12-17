@@ -23,18 +23,14 @@ public class IndexTreeBuilder {
                                   int minInternalNodeChilds,
                                   int maxInternalNodeChilds,
                                   int secondaryIndexSize,
-                                  String treePrintOutFile,
                                   boolean openSecondaryIndex) {
         List<long[]> idToTime = getAllEdgeTimeASC(hyperedgeIdFile); // 将超边按照时间升序排序
         Map<String, List<String>> proMap = getId2PropertyMap(propertyFile); // 顶点到属性的映射
         Map<String, String> idMap = getEdgeIdMap(hyperedgeIdFile); // 超边id到整条超边的映射（包含顶点id以及属性）
-        Map<String, String> labelMap = getEdgeLabelMap(hyperedgeLabelFile); // 超边id到整条超边的映射（包含顶点label以及属性）
-
-//        for (int i = idToTime.size() - 1; i >= idToTime.size() - 10; i--)
-//            System.out.println(idToTime.get(i)[0] + " " + idToTime.get(i)[1]);
+        Map<String, String> labelMap = getEdgeLabelMap(hyperedgeLabelFile); // 超边标签到整条超边的映射（包含顶点label以及属性）
 
         IndexTree indexTree = new IndexTree(windowSize, encodingLength, hashFuncCount, minInternalNodeChilds, maxInternalNodeChilds, secondaryIndexSize);
-        indexTree.buildTemporalHypergraphTree(idToTime, idMap, labelMap, proMap, treePrintOutFile, openSecondaryIndex);
+        indexTree.buildTemporalHypergraphTree(idToTime, idMap, labelMap, proMap, openSecondaryIndex);
         return indexTree;
     }
 
@@ -48,11 +44,10 @@ public class IndexTreeBuilder {
                                                    int minInternalNodeChilds,
                                                    int maxInternalNodeChilds,
                                                    int secondaryIndexSize,
-                                                   String treePrintOutFile,
                                                    boolean openSecondaryIndex) {
 
         IndexTree indexTree = new IndexTree(windowSize, encodingLength, hashFuncCount, minInternalNodeChilds, maxInternalNodeChilds, secondaryIndexSize);
-        indexTree.buildTemporalHypergraphTree(idToTime, idMap, labelMap, proMap, treePrintOutFile, openSecondaryIndex);
+        indexTree.buildTemporalHypergraphTree(idToTime, idMap, labelMap, proMap, openSecondaryIndex);
         return indexTree;
     }
 

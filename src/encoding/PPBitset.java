@@ -1,9 +1,7 @@
 package encoding;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.List;
+import java.math.BigInteger;
+import java.util.*;
 
 /**
  * 属性编码位串类
@@ -15,6 +13,8 @@ public class PPBitset extends BitSet implements Comparable<PPBitset> {
     /* Used to shift left or right for a partial word mask */
     private static final int WORD_MASK = 0xffffffff;
 
+    // words[0]相比words[1]是编码的低位
+    // 如果按8位来则{2,3}表示 0000 1000 0000 0100
     private int[] words;
 
     /* 表示该位串可使用位的最大数量，一经初始化便无法修改 */
@@ -56,6 +56,17 @@ public class PPBitset extends BitSet implements Comparable<PPBitset> {
         return Arrays.copyOf(words, wordsInUse);
     }
 
+    public BigInteger toBigInteger() {
+        BigInteger value = BigInteger.ZERO;
+        for (int i = 0; i < words.length; i++) {
+            long unsignedValue = words[i] & 0xFFFFFFFFL;
+            BigInteger bitValue = BigInteger.valueOf(unsignedValue);
+            // 每个 int 位移到对应的高位
+            value = value.or(bitValue.shiftLeft(i * 32));  // 左移 32 位
+        }
+        return value;
+    }
+
     public void set(int bitIndex, boolean value) {
         if (value)
             set(bitIndex);
@@ -70,6 +81,7 @@ public class PPBitset extends BitSet implements Comparable<PPBitset> {
         if (bitIndex >= maxBitsInUse)
             throw new IndexOutOfBoundsException("bitIndex exceeds the valid range of bits for the bitset: " +
                     bitIndex + " >= " + this.length());
+
 
         int wordIndex = wordIndex(bitIndex);
         words[wordIndex] |= (1 << bitIndex);
@@ -299,4 +311,42 @@ public class PPBitset extends BitSet implements Comparable<PPBitset> {
 
         return 0;
     }
+
+    @Override
+    public String toString() {
+        int numBits = (wordsInUse > 128) ? cardinality() : wordsInUse * BITS_PER_WORD;
+        StringBuilder b = new StringBuilder(6 * numBits + 2);
+//        b.append('{');
+
+        // List to collect set bits in order
+        List<Integer> setBits = new ArrayList<>();
+
+        int i = nextSetBit(0);
+        if (i != -1) {
+            setBits.add(i);  // Add the first set bit
+            while (true) {
+                if (++i < 0) break;
+                if ((i = nextSetBit(i)) < 0) break;
+                int endOfRun = nextClearBit(i);
+                do {
+                    setBits.add(i);  // Add all subsequent set bits
+                } while (++i != endOfRun);
+            }
+        }
+
+        // Reverse the setBits list to print in descending order
+        Collections.reverse(setBits);
+
+        // Append the set bits to the StringBuilder
+        for (int j = 0; j < setBits.size(); j++) {
+            if (j > 0) {
+//                b.append(", ");
+            }
+            b.append(setBits.get(j));
+        }
+
+//        b.append('}');
+        return b.toString();
+    }
+
 }

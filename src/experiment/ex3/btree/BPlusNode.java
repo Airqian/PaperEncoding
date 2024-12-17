@@ -1,5 +1,8 @@
-package experiment.ex3;
+package experiment.ex3.btree;
 
+import indextree.hyperedge.DataHyperedge;
+
+import java.io.*;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -621,19 +624,58 @@ public class BPlusNode<K extends Comparable<K>, V> {
         return sb.toString();
     }
 
-    public void printBPlusTree(int index) {
+    public void printBPlusTree(int index, String outputFile) {
+        StringBuilder builder = new StringBuilder();
+        BufferedWriter bufferedWriter;
+
+        try {
+            bufferedWriter = new BufferedWriter(new FileWriter(outputFile, true));
+
+            if (this.isLeaf) {
+                System.out.println("层级：" + index + ",叶子节点，keys为: ");
+                for (int i = 0; i < entries.size(); ++i) {
+                    DataHyperedge key = (DataHyperedge) entries.get(i).getKey();
+                    // long edgeTime = (long) entries.get(i).getValue();
+                    builder.append(key.printEncoding()).append("\t").append(String.valueOf(entries.get(i).getValue())).append("\n");
+                }
+                bufferedWriter.write(builder.toString());
+                bufferedWriter.close();
+            } else {
+                System.out.println("层级：" + index + ",非叶子节点，keys为: ");
+                for (int i = 0; i < entries.size(); ++i) {
+                    DataHyperedge key = (DataHyperedge) entries.get(i).getKey();
+                    // long edgeTime = (long) entries.get(i).getValue();
+                    builder.append(key.printEncoding()).append("\t").append(String.valueOf(entries.get(i).getValue())).append("\n");
+                }
+                bufferedWriter.write(builder.toString());
+                bufferedWriter.close();
+
+                for (int i = 0; i < children.size(); ++i)
+                    children.get(i).printBPlusTree(index + 1, outputFile);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
+    public void printBPlusTreeRaw(int index) {
         if (this.isLeaf) {
             System.out.print("层级：" + index + ",叶子节点，keys为: ");
-            for (int i = 0; i < entries.size(); ++i)
+            for (int i = 0; i < entries.size(); ++i) {
                 System.out.print(entries.get(i) + " ");
+            }
             System.out.println();
         } else {
             System.out.print("层级：" + index + ",非叶子节点，keys为: ");
-            for (int i = 0; i < entries.size(); ++i)
+            for (int i = 0; i < entries.size(); ++i) {
                 System.out.print(entries.get(i) + " ");
+            }
             System.out.println();
+
             for (int i = 0; i < children.size(); ++i)
-                children.get(i).printBPlusTree(index + 1);
+                children.get(i).printBPlusTreeRaw(index + 1);
         }
     }
 }
