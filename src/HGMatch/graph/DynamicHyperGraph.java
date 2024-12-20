@@ -77,7 +77,7 @@ public class DynamicHyperGraph {
     }
 
     // 模拟num_edges方法，返回边的数量，即edges列表的大小
-    public int numEdges() {
+    public int num_edges() {
         return edges.size();
     }
 
