@@ -1,6 +1,6 @@
-package HGMatch.graph;
+package zHGMatch.graph;
 
-import HGMatch.graph.util.Canonize;
+import zHGMatch.graph.util.Canonize;
 
 import java.util.*;
 import java.util.stream.Collectors;

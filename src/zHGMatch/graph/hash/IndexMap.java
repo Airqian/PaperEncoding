@@ -1,4 +1,4 @@
-package HGMatch.graph.hash;
+package zHGMatch.graph.hash;
 
 // 能不能直接用HashMap代替
 public class IndexMap {

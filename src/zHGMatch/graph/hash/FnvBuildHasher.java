@@ -1,6 +1,4 @@
-package HGMatch.graph.hash;
-
-import HGMatch.graph.hash.BuildHasher;
+package zHGMatch.graph.hash;
 
 // 假设的基于FnvHash的哈希构建器实现（模拟fnv库相关功能）
 class FnvBuildHasher implements BuildHasher {

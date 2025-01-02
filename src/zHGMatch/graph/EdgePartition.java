@@ -1,6 +1,6 @@
-package HGMatch.graph;
+package zHGMatch.graph;
 
-import HGMatch.graph.util.Pair;
+import zHGMatch.graph.util.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -111,17 +111,8 @@ public class EdgePartition {
         if (nodes.size() == 1)
             return getRowsOfNode(nodes.get(0));
 
-//        Set<Integer> resultSet = new TreeSet<>();
-//        for (int node : nodes) {
-//            List<Integer> rows = getRowsOfNode(node);
-//            for (int row : rows) {
-//                resultSet.add(row);
-//            }
-//        }
-//
-//        return resultSet.stream().map(i->i).collect(Collectors.toList());
-
-        List<Integer> result = nodes.stream().map(this::getRowsOfNode).flatMap(List::stream).distinct().collect(Collectors.toList());
+        List<Integer> result = nodes.stream().map(this::getRowsOfNode)
+                .flatMap(List::stream).distinct().collect(Collectors.toList());
         return result;
     }
 
@@ -141,10 +132,36 @@ public class EdgePartition {
 
     // 对 edges 进行排序并选择是否构建索引
     public void sortEdges(boolean build_index) {
+        Comparator<List<Integer>> lexComparator = (list1, list2) -> {
+            if (list1 == null && list2 == null) return 0;
+            if (list1 == null) return -1;
+            if (list2 == null) return 1;
+
+            int size1 = list1.size();
+            int size2 = list2.size();
+            int minSize = Math.min(size1, size2);
+
+            for (int i = 0; i < minSize; i++) {
+                Integer elem1 = list1.get(i);
+                Integer elem2 = list2.get(i);
+
+                if (elem1 == null && elem2 == null) continue;
+                if (elem1 == null) return -1;
+                if (elem2 == null) return 1;
+
+                int cmp = elem1.compareTo(elem2);
+                if (cmp != 0) {
+                    return cmp;
+                }
+            }
+            // 如果前 minSize 个元素相同，较短的列表排前面
+            return Integer.compare(size1, size2);
+        };
+
         // 将边按顶点数进行分组
         List<List<Integer>> edgeChunks = IntStream.range(0, edges.size() / arity)
                 .mapToObj(i -> edges.subList(i * arity, (i + 1) * arity))
-                .sorted(Comparator.comparing((List<Integer> e) -> e.toString()))
+                .sorted(lexComparator)
                 .distinct()
                 .collect(Collectors.toList());
 

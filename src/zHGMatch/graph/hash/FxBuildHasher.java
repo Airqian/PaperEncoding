@@ -1,6 +1,4 @@
-package HGMatch.graph.hash;
-
-import HGMatch.graph.hash.BuildHasher;
+package zHGMatch.graph.hash;
 
 // 假设的基于FxHash的哈希构建器实现
 // https://docs.rs/ccl-fxhash/latest/fxhash/

@@ -1,10 +1,11 @@
-package HGMatch.graph;
+package zHGMatch.graph;
 
 import java.util.*;
 
 public class DynamicHyperGraph {
-    private HashMap<Integer, Integer> labels;  // 源码中是IndexMap，从 addNode 方法看，key 是顶点id，value 是顶点对应的标签
-    private List<List<Integer>> edges;         // 如果和 StaticHyperGraph 一致的话，edges 中的数字保存的是点的 id，通过 labels 拿到标签
+    // 从querygraph的labels构建而来，key是labels的下标，value是其上对应的值
+    private HashMap<Integer, Integer> labels;  // key 是顶点id，value 是顶点对应的标签
+    private List<List<Integer>> edges;         // 其中的每一个元素是一条边。如果和 StaticHyperGraph 一致的话，edges 中的数字保存的是点的 id，通过 labels 拿到标签
 
     // 构造函数，用于创建默认的DynamicHyperGraph实例，初始化labels和edges
     public DynamicHyperGraph() {
@@ -40,13 +41,8 @@ public class DynamicHyperGraph {
         }
     }
 
-    // 到时候看传入进来的是数组还是list
-    public void addEdge(int[] edge) {
-        List<Integer> edgeList = new ArrayList<>();
-        for (int nodeId : edge) {
-            edgeList.add(nodeId);
-        }
-        edges.add(edgeList);
+    public void addEdge(List<Integer> edge) {
+        edges.add(edge);
     }
 
     // 模拟into_static方法，将DynamicHyperGraph实例转换为StaticHyperGraph实例（这里简单返回一个模拟的StaticHyperGraph实例，具体转换逻辑根据实际完善）
@@ -72,7 +68,7 @@ public class DynamicHyperGraph {
     }
 
     // 获取节点数量的方法，对应Rust中的num_nodes方法
-    public int numsNodes() {
+    public int nums_nodes() {
         return labels.size();
     }
 

@@ -1,16 +1,12 @@
-package HGMatch.graph;
-
-import org.w3c.dom.ls.LSInput;
+package zHGMatch.graph;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 // partitioned_edges.rs
 public class PartitionedEdges {
     private List<Integer> nodeLabels;
 
-    private HashMap<List<Integer>, EdgePartition> map; // key 保存的是标签
+    private HashMap<List<Integer>, EdgePartition> map; // map 就是边标签到边的分区，key相当于分区签名，详细信息保存在value里，value包括了该分区内的所有边
 
     public PartitionedEdges(List<Integer> nodeLabels) {
         this.nodeLabels = nodeLabels;
@@ -51,7 +47,7 @@ public class PartitionedEdges {
     }
 
     public int get_node_label(int node) {
-        return this.nodeLabels.get(node);
+        return this.nodeLabels.get(node-1);
     }
 
     public EdgePartition get_partition(List<Integer> labels) {
