@@ -281,40 +281,6 @@ public class ExecutionPlanUtils {
             return Integer.compare(size1, size2);
         };
 
-        // 过滤出在多个边中出现的节点，并关联标签  Vec<(u32, (Vec<Vec<u32>>, u32))>
-//        List< Pair<Integer, Pair<List<List<Integer>>, Integer> >> node_to_edge_and_label = new ArrayList<>();
-//        for (Map.Entry<Integer, List<List<Integer>>> entry : node_to_edge_map.entrySet()) {
-//            int key = entry.getKey();
-//            List<List<Integer>> value = entry.getValue();
-//
-//            if (value.size() > 1) {
-//                int label = query_graph.getNodeLabel(key);
-//                // 排序边（按某种顺序，假设按自然顺序）
-//                value.sort(lexComparator);
-//                node_to_edge_and_label.add(new Pair<>(key, new Pair<>(value, label)));
-//            }
-//
-//        }
-//        node_to_edge_and_label.sort((l1, l2) -> (l1.getKey() - l2.getKey()));
-
-        // 分组节点 HashMap<(Vec<Vec<u32>>, u32), Vec<u32>
-//        Map<Pair<Set<List<Integer>>, Integer>, List<Integer>> node_groups = new HashMap<>();
-//        for (Pair<Integer, Pair<List<List<Integer>>, Integer>> pair : node_to_edge_and_label) {
-//            int node = pair.getKey();
-//            Pair<List<List<Integer>>, Integer> edgeAndLabel = pair.getValue();
-//            Set<List<Integer>> edgeSet = new HashSet<>(edgeAndLabel.getKey());
-//            int label = edgeAndLabel.getValue();
-//
-//            Pair<Set<List<Integer>>, Integer> groupKey = new Pair<>(edgeSet, label);
-//            node_groups.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(node);
-//        }
-
-        // 【转换为列表并排序
-//        List<Pair<Pair<Set<List<Integer>>, Integer>, List<Integer>>> node_groups_vec = new ArrayList<>();
-//        for (Map.Entry<Pair<Set<List<Integer>>, Integer>, List<Integer>> entry : node_groups.entrySet()) {
-//            node_groups_vec.add(new Pair<>(entry.getKey(), entry.getValue()));
-//        }
-
         // 【新写的】
         // // 过滤并处理节点与边
         List<NodeEdgeLabel> node_to_edge_and_label = node_to_edge_map.entrySet().stream()
@@ -344,11 +310,6 @@ public class ExecutionPlanUtils {
                 .map(entry -> new GroupEntry(entry.getKey().getEdges(), entry.getKey().getLabel(), entry.getValue()))
                 .collect(Collectors.toList());
 
-        // List<Pair<Pair<Set<List<Id>>, String>, List<Id>>> nodeGroupsVec = nodeGroups.entrySet().stream()
-        //         .sorted(Comparator.comparing(entry -> entry.getKey().getKey().toString()))
-        //         .map(entry -> new Pair<>(entry.getKey(), entry.getValue()))
-        //         .collect(Collectors.toList());
-
         // 构建 indices, degrees, len_s
         List<List<Integer>> indices = new ArrayList<>();
         List<Integer> degrees = new ArrayList<>();
@@ -373,26 +334,6 @@ public class ExecutionPlanUtils {
             degrees.add(degree);
             len_s.add(len);
         }
-//        for (Pair<Pair<Set<List<Integer>>, Integer>, List<Integer>> group : node_groups_vec) {
-//            Pair<Set<List<Integer>>, Integer> edgeAndLabel = group.getKey();
-//            Set<List<Integer>> edges = edgeAndLabel.getKey();
-//            int label = edgeAndLabel.getValue();
-//            List<Integer> nodes = group.getValue();
-//
-//            List<Integer> index = edges.stream().flatMap(edge -> {
-//                Map<Integer, List<Integer>> posMap = edge_pos.get(edge);
-//                if (posMap != null && posMap.containsKey(label)) {
-//                    return posMap.get(label).stream();
-//                }
-//                return Stream.empty();
-//            }).sorted().collect(Collectors.toList());
-//
-//            int degree = edges.size();
-//            int len = nodes.size();
-//            indices.add(index);
-//            degrees.add(degree);
-//            len_s.add(len);
-//        }
 
         // 构建 contains，会计算包含关系
         List<List<Integer>> contains = new ArrayList<>();
@@ -420,28 +361,7 @@ public class ExecutionPlanUtils {
             Collections.sort(contains_elem);
             contains.add(contains_elem);
         }
-//        for (int i = 0; i < node_groups_vec.size(); i++) {
-//            Pair<Pair<Set<List<Integer>>, Integer>, List<Integer>> group1 = node_groups_vec.get(i);
-//            Set<List<Integer>> edge1 = group1.getKey().getKey();
-//            int label1 = group1.getKey().getValue();
-//
-//            List<Integer> contains_elem = new ArrayList<>();
-//            for (int j = 0; j < node_groups_vec.size(); j++) {
-//                if (i == j)
-//                    continue;
-//                Pair<Pair<Set<List<Integer>>, Integer>, List<Integer>> group2 = node_groups_vec.get(j);
-//                Set<List<Integer>> edge2 = group2.getKey().getKey();
-//                int label2 = group2.getKey().getValue();
-//                if (label1 != label2)
-//                    continue;
-//
-//                if (edge2.containsAll(edge1))
-//                    contains_elem.add(j);
-//            }
-//
-//            Collections.sort(contains_elem);
-//            contains.add(contains_elem);
-//        }
+
         return new NodeVerifier(indices, degrees, len_s, contains);
     }
 
