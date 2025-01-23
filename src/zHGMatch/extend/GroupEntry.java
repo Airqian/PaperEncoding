@@ -3,6 +3,7 @@ package zHGMatch.extend;
 import java.util.*;
 
 public class GroupEntry {
+    // nodes 里的顶点标签为 label，这些 nodes 都包含在 edges 里的边
     private final Set<List<Integer>> edges;
     private final int label;
     private final List<Integer> nodes;

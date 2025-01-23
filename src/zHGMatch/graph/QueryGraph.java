@@ -48,14 +48,15 @@ public class QueryGraph {
 
     // 静态方法，用于从 JSONObject 创建 GraphData 实例
     public static QueryGraph fromJSONObject(JSONObject obj) {
-        List<Integer> labels = new ArrayList<>();
         JSONArray labelsArray = obj.getJSONArray("labels");
+        List<Integer> labels = new ArrayList<>();
         for (int i = 0; i < labelsArray.length(); i++) {
             labels.add(labelsArray.getInt(i));
         }
 
-        List<List<Integer>> edges = new ArrayList<>();
         JSONArray edgesArray = obj.getJSONArray("edges");
+        List<List<Integer>> edges = new ArrayList<>();
+
         for (int i = 0; i < edgesArray.length(); i++) {
             JSONArray edge = edgesArray.getJSONArray(i);
             List<Integer> edgeList = new ArrayList<>();

@@ -23,43 +23,38 @@ public class Extender {
         this.node_filter = node_filter;
     }
 
-    public List<List<Integer>> extend(List<Integer> partial, PartitionedEdges edges) {
+    public List<List<Integer>> extend(List<Integer> partial, PartitionedEdges data_graph) {
         // 获取对应的 Partition
-        EdgePartition partition = edges.get_partition(extended_labels);
+        EdgePartition partition = data_graph.get_partition(this.extended_labels);
 
-        // 使用节点选择器选择节点
+        // ‼️‼️‼️‼️ 返回的是部分嵌入中的顶点，这些顶点里可能存在与当前待匹配超边的公共顶点
+        // node_selectors 中的 node_selector 是待匹配超边与 partial 中的超边的所有公共顶点相关的约束
         List<List<Integer>> nodes = this.node_selectors.stream()
                 .map(selector -> selector.select(partial)).collect(Collectors.toList());
 
-        // 获取这些节点对应的行索引
+        // 接着通过倒排索引找出nodes中每组node共同出现的 f(eq)
         List<List<Integer>> rows = nodes.stream().map(n -> partition.getRowsOfNodes(n))
                 .collect(Collectors.toList());
 
-        // 对 rows 中的集合求交集
+        // 对找到的f(eq)取交集，能理解
         List<Integer> intersected = rows.stream()
                 .reduce((set1, set2) -> set1.stream()
                         .filter(set2::contains)
                         .collect(Collectors.toList())).orElse(new ArrayList<>());
 
-        // 创建嵌入集合，并计算新节点数量
+        // 计算新节点数量（要扩展的新节点个数）
         Set<Integer> embeddingSet = new HashSet<>(partial);
         int num_new_nodes = num_nodes - embeddingSet.size();
 
-        // 获取交集行对应的边，并过滤满足新节点数量的边
-//        List<List<Integer>> extended = intersected.stream().map(r -> partition.getEdge(r))
-//                .filter(e -> {
-//                    long count = e.stream().filter(n -> embeddingSet.contains(n)).count();
-//                    return count == num_new_nodes;
-//                }).collect(Collectors.toList());
-
+        // 获取交集行对应的边，并过滤不满足新节点数量的边
         List<List<Integer>> extended = intersected.stream()
-                .map(r -> partition.getEdge(r)) // 将边的下标映射成边的顶点集合
+                .map(r -> partition.getEdge(r)) // 根据边的下标得到边的顶点列表
                 .filter(e -> e.stream()
-                        .filter(n -> !embeddingSet.contains(n))  // // 过滤出不在 embedding_set 中的节点
-                        .count() == num_new_nodes)  // // 保留那些不在 embedding_set 中的节点数量等于 num_new_nodes 的边
-                .collect(Collectors.toList());
+                        .filter(n -> !embeddingSet.contains(n))  // 过滤掉公共顶点，剩下的顶点个数是否等于需要扩展的新节点个数
+                        .count() == num_new_nodes)
+                .collect(Collectors.toList()); // 如果满足的话，就把这条边留下来
 
-        // 合并结果，看起来像是为 extended 的每个元素都扩展 partial
+        // 合并 partial 和找到的新的候选超边
         List<List<Integer>> results = extended.stream()
                 .map(ext -> {
                     List<Integer> combined = new ArrayList<>();
@@ -69,7 +64,7 @@ public class Extender {
                 })
                 .collect(Collectors.toList());
 
-        // 如果设置了节点过滤器，保留通过过滤器的结果
+        // ‼️‼️‼️‼️ 这里应该是嵌入验证了，如果 filter 返回 false 就过滤，返回 true 则保留
         if (this.node_filter != null)
             results = results.stream().filter(node_filter::filter).collect(Collectors.toList());
 

@@ -57,7 +57,7 @@ public class PartitionedEdges {
     // 添加一条边，将处理后的边添加到合适的EdgePartition分区中
     public void add_edge(List<Integer> edge) {
         // 1. 将 edge 变成一个去重后的有序状态
-        // 去重的原因是因为超边中没有重复的顶点（顶点id不能重复），但是顶点的标签是可以重复的
+        //    去重的原因是因为超边中没有重复的顶点（顶点id不能重复），但是顶点的标签是可以重复的
         edge.sort(Integer::compareTo);
         List<Integer> uniqueEdge = new ArrayList<>(new HashSet<>(edge));
 
@@ -75,7 +75,7 @@ public class PartitionedEdges {
         for (List<Integer> list : labelsMap.values())
             list.sort(Integer::compareTo);
 
-        // 3. 这一步将 labelsMap 中的标签和顶点关系打平，经过整个循环后，labels 和 new_edge 就构建好了符合特定规则的新的边标签列表和边节点列表。
+        // 3. 这一步将 labelsMap 中的标签和顶点关系打平，经过这一步后，标签有序，且顶点按照标签也局部有序
         List<Integer> labels = new ArrayList<>(arity);
         List<Integer> newEdge = new ArrayList<>(arity);
 
@@ -136,7 +136,11 @@ public class PartitionedEdges {
 
         System.out.println("Min/Max arity：" + minArity + "," + maxArity);
 
-        System.out.println("Graph Size = " + graph_size() + ", Index Size = " + index_size());
+        double graph_size = graph_size() * 1.0 / 1000;
+        double index_size = index_size() * 1.0 / 1000;
+        System.out.printf("Graph Size = %.1f KB, Index Size = %.1f KB\n", graph_size, index_size);
+
+//        System.out.println("Graph Size = " + (graph_size() * 1.0 / 1024) + "KB, Index Size = " + index_size());
     }
 
     public static void main(String[] args) {

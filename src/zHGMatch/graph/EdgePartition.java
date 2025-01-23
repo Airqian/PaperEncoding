@@ -203,12 +203,12 @@ public class EdgePartition {
     }
 
     public int graphSize() {
-        int intSize = Integer.SIZE;
+        int intSize = Integer.BYTES;
         return (labels.size() + edges.size() + 4) * intSize;
     }
 
     public int indexSize() {
-        int intSize = Integer.SIZE;
+        int intSize = Integer.BYTES;
         return index.size() != 0 ? index.values().stream().mapToInt(v -> intSize * (v.size() + 3))
                 .sum() : 0;
     }

@@ -4,30 +4,23 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * indices:
- *      每个内部 Vec<usize> 代表一组节点的索引。例如，indices[0] = vec![1, 2, 3] 表示第一组节点位于 partial 切片的索引 1、2、3 处。
- * degrees:
- *      对应于每组 indices，表示该组节点的期望度数。例如，degrees[0] = 2 表示第一组节点的度数应为 2。
- * len_s:
- *      对应于每组 indices，表示该组节点的期望大小。例如，len_s[0] = 3 表示第一组节点应包含 3 个元素。
- * contains:
- *      描述 indices 之间的包含关系。contains[i] 是一个向量，包含应包含在 indices[i] 中的其他 indices 的索引。
- *      例如，contains[0] = [1, 2] 表示 indices[0] 应该包含 indices[1] 和 indices[2] 中的元素。
+ * 同下标 i 下，表示有 nodeNum[i] 个顶点同时出现在 edgeNum[i] 条边里，indices[i] 则记录这些边里标签为 label 的顶点索引位置
  */
 
 public class NodeVerifier {
     private List<List<Integer>> indices;
-    private List<Integer> degrees;
-    private List<Integer> len_s;
+    private List<Integer> edgeNums; // edgeNums
+    private List<Integer> nodeNums;
     private List<List<Integer>> contains;
 
-    public NodeVerifier(List<List<Integer>> indices, List<Integer> degrees, List<Integer> len_s, List<List<Integer>> contains) {
+    public NodeVerifier(List<List<Integer>> indices, List<Integer> edgeNums, List<Integer> nodeNums, List<List<Integer>> contains) {
         this.indices = indices;
-        this.degrees = degrees;
-        this.len_s = len_s;
+        this.edgeNums = edgeNums;
+        this.nodeNums = nodeNums;
         this.contains = contains;
     }
 
+    // 查询超边和候选超边中对应的顶点的 顶点标签 和 所关联的边集 也应该相等
     public boolean filter(List<Integer> partial) {
         List<Set<Integer>> edgeSets = new ArrayList<>();
 
@@ -47,20 +40,21 @@ public class NodeVerifier {
          *  counter = {2: 2, 3: 1}
          *  过滤后 edgeSet = {3}
          */
+        // 在 last_edge 中，同下标 i 下，表示有 nodeNum[i] 个顶点同时出现在 edgeNum[i] 条边里，indices[i] 则记录这些边里标签为 label 的顶点索引位置
         for (int i = 0; i < indices.size(); i++) {
             List<Integer> pos = indices.get(i);
-            int degree = degrees.get(i);
+            int edgeNum = edgeNums.get(i);
 
-            // 记录节点出现的次数
+            // 记录 indices 中节点的度数
             Map<Integer, Integer> counter = new HashMap<>();
             for (int index : pos) {
                 int n = partial.get(index);
                 counter.put(n, counter.getOrDefault(n, 0) + 1);
             }
 
-            // 过滤度数等于degree的id
+            // 第一步：只保留度数等于degree的节点，保存在 edgeSet 中，因为这些性质都从部分查询中来，部分嵌入也应该遵循，留下来的点才可能在候选超边中出现
             Set<Integer> edgeSet = counter.entrySet().stream()
-                    .filter(entry -> entry.getValue() == degree)
+                    .filter(entry -> entry.getValue() == edgeNum)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toSet());
             edgeSets.add(edgeSet);
@@ -74,16 +68,22 @@ public class NodeVerifier {
          * 尝试从 edgeSet 移除 3
          * 但是 3 不存在于 edgeSet 中，移除失败，返回 false
          */
-        // 根据 contains 进一步过滤 edgeSets
+        // 第二步：验证候选超边的 contains 关系
         // contains[i] 是一个列表，包含应从 edgeSets[i] 中移除的其他 edgeSets 的索引。
         for (int i = 0; i < contains.size(); i++) {
-            List<Integer> containIndices = contains.get(i);
+            List<Integer> containIndices = contains.get(i); // 值是包含集，下标是被包含集
             if (containIndices.isEmpty())
                 continue;
 
+            /**
+             * 位置j上的边集包含位置i上的边集，那么从顶点的角度来看条件更加严苛，因此位置j上的点集通常比位置i上的点集小，且位置i上的点集大于等于位置j上的点集
+             * 由于 indices 中保存的顶点索引是全量的，因此得到的 edgeSets 的点集会有重复，而 this.nodeNums 中的顶点是去重的，也就是点集j会包含在点集i里
+             * 因此需要在点集i中去除点集j中的节点，那么剩余的顶点数量才满足 this.edgeNums[i] 以及严格的 this.nodeNums[i]
+             *
+             */
             Set<Integer> edgeSet = new HashSet<>(edgeSets.get(i));
             for (int j : containIndices) {
-                Set<Integer> containedEdgeSet = edgeSets.get(j);
+                Set<Integer> containedEdgeSet = edgeSets.get(j); // 大的集合
                 for (int n : containedEdgeSet) {
                     if (!edgeSet.remove(n))
                         return false;
@@ -93,17 +93,19 @@ public class NodeVerifier {
             edgeSets.set(i, edgeSet);
         }
 
-        // 遍历 edgeSets 和 len_s，确保每个 edgeSet 的大小等于对应的 len_s
-        // 如果有任何一个不匹配，设置 sizeCheck = false 并跳出循环
+        /**
+         * 经过了前面两步的筛选之后，终于可以进行验证了
+         * edgeSets 是从候选超边中找出的符合条件的点的数量，而 nodeNums 是从查询超边中找出的点的数量，两者只要有一个不相等，该嵌入就不合法
+         */
         boolean sizeCheck = true;
         for (int i = 0; i < edgeSets.size(); i++) {
-            if (edgeSets.get(i).size() != len_s.get(i)) {
+            if (edgeSets.get(i).size() != nodeNums.get(i)) {
                 sizeCheck = false;
                 break;
             }
         }
 
-        // 检查所有 edgeSets 中的元素是否唯一
+        // 检查 edgeSets 中的所有元素是否在各个集合之间是唯一的，也就是说将 edgeSets 展平之后每个顶点都是唯一的
         boolean uniqueCheck = edgeSets.stream()
                 .flatMap(Set::stream)
                 .distinct()
@@ -113,13 +115,13 @@ public class NodeVerifier {
     }
 
     public static void main(String[] args) {
-        // 定义 indices, degrees, len_s, contains
+        // 定义 indices, degrees, nodeNums, contains
         List<List<Integer>> indices = Arrays.asList(
                 Arrays.asList(0, 1, 2),
                 Arrays.asList(1, 2, 3)
         );
-        List<Integer> degrees = Arrays.asList(2, 1);
-        List<Integer> len_s = Arrays.asList(1, 1);
+        List<Integer> edgeNums = Arrays.asList(2, 1);
+        List<Integer> nodeNums = Arrays.asList(1, 1);
         List<List<Integer>> contains = Arrays.asList(
                 Arrays.asList(1),
                 Collections.emptyList()
@@ -129,7 +131,7 @@ public class NodeVerifier {
         List<Integer> partial = Arrays.asList(1,2,2,3);
 
         // 初始化 NodeVerifier
-        NodeVerifier verifier = new NodeVerifier(indices, degrees, len_s, contains);
+        NodeVerifier verifier = new NodeVerifier(indices, edgeNums, nodeNums, contains);
 
         // 调用 filter 方法，预期为 false（因为在 contains 0 的时候尝试移除不存在的 Id(3)）
         boolean result = verifier.filter(partial);

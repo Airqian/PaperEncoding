@@ -24,7 +24,7 @@ public class Executor {
 
     private final static String node_path = "src/zHGMatch/data/house-committees/node-labels-house-committees.txt";
     private final static String edge_path = "src/zHGMatch/data/house-committees/hyperedges-house-committees.txt";
-    private final static String query_path = "src/zHGMatch/data/house-committees/m_4_m.txt";
+    private final static String query_path = "src/zHGMatch/data/house-committees/query.txt";
 
     public static void main(String[] args) {
         run_query();
@@ -36,14 +36,14 @@ public class Executor {
         int num_of_queries = queryGraphs.size();
 
         // 读取数据集文件
-        PartitionedEdges graph = read_text_to_graph(node_path, edge_path);
-//        graph.status();
+        PartitionedEdges data_graph = read_text_to_graph(node_path, edge_path);
+        data_graph.status();
 
         int total_count = 0;
         long total_time = 0l;
         boolean all_plans = false;
 
-        for (int i = 0; i < queryGraphs.size(); i++) {
+        for (int i = 0; i < num_of_queries; i++) {
             QueryGraph queryGraph = queryGraphs.get(i);
             MatchDriver driver;
 
@@ -51,17 +51,19 @@ public class Executor {
                 List<ExecutionPlan> executionPlans = new ExecutionPlan().all_plans_from_query(queryGraph);
                 driver = new MatchDriver("Query-" + i, queryGraph, executionPlans, true);
             } else {
-                ExecutionPlan plan = new ExecutionPlan().from_query(queryGraph, graph);
+                ExecutionPlan plan = new ExecutionPlan().from_query(queryGraph, data_graph);
                 driver = new MatchDriver("Query-" + i, queryGraph, new ArrayList<>(Arrays.asList(plan)), true);
             }
 
-            // 表示不设置 limit
-            Pair<Integer, Long> res = driver.run(graph, 100);
+            Pair<Integer, Long> res = driver.run(data_graph, 100);
             total_count += res.getKey();
-            total_time += res.getValue();
+            total_time = Math.addExact(total_time, res.getValue());
         }
 
-        System.out.println("Completed " + num_of_queries + " Queries  - Total Count: " + total_count + ", Total Time: " + total_time + "ms");
+        System.out.println("total_time = " + total_time);
+        double time = total_time / 1_000_000_000.0;
+        System.out.print("Completed " + num_of_queries + " Queries  - Total Count: " + total_count);
+        System.out.printf(", Total Time: %.6f s", time);
     }
 
     public static List<QueryGraph> readQueryFile() {

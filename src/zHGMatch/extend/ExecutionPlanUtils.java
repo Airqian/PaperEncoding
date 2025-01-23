@@ -28,16 +28,14 @@ public class ExecutionPlanUtils {
         System.out.println(lists.size());
         for (List<List<Integer>> list : lists)
             System.out.println(list);
-
-
     }
 
-    // TODO 生成排列顺序？？
+    // 排列组合生成所有可能的匹配顺序
     public static List<List<List<Integer>>> all_matching_order(QueryGraph graph) {
         List<List<List<Integer>>> results = new ArrayList<>();
         List<List<Integer>> edges = new ArrayList<>(graph.to_graph().getEdges());
 
-        // 生成边的排列组合并进行筛选
+        // 生成边的排列组合并进行连通性筛选
         List<List<List<Integer>>> permutations = generatePermutations(edges);
         for (List<List<Integer>> order : permutations) {
             if (is_connected(order))
@@ -47,8 +45,8 @@ public class ExecutionPlanUtils {
     }
 
     /**
-     * TODO 计算匹配顺序
-     * 首先根据每条边所在的分区边的数量定一个基本的匹配顺序，然后从顺序内的第一条边开始往后顺序找连通的边以确定最终的匹配顺序
+     * 优化后的匹配顺序计算
+     * 计算超边所在分区的超边数与超边连通度的比值，选择最小的
      *
      * @param query
      * @param edges
@@ -67,12 +65,16 @@ public class ExecutionPlanUtils {
             return Collections.emptyList();
         }
 
-        // 解释：--- 得到每条edge对应的分区内边的数量，也即按边标签的频率排序
+        // 第一步：按不同标签分区内边的数量，也即按边标签的频率进行排序
         queryEdges.sort(Comparator.comparingInt(edge -> {
             List<Integer> labels = query_graph.getEdgeLabels(edge);
             return edges.get_edge_label_frequency(labels);
         }));
 
+        /**
+         * 第二步：从第一条边开始判断，按照 queryEdges 中 edge 的顺序，是否能连通成一个子图
+         *       ‼️‼️‼️‼️ 这个地方和论文不一样！！没有计算分区基数值与连通度的比值，只是判断是否能成为一个连通的子图
+         */
         // 克隆第一条边并移除
         List<Integer> firstEdge = new ArrayList<>(queryEdges.get(0));
         queryEdges.remove(0);
@@ -83,14 +85,13 @@ public class ExecutionPlanUtils {
 
         Set<Integer> matchedNodes = new HashSet<>(firstEdge);
 
-        // 解释：--- 迭代匹配剩余的边
         while (!queryEdges.isEmpty()) {
             boolean found = false;
 
             Iterator<List<Integer>> iterator = queryEdges.iterator();
             while (iterator.hasNext()) {
                 List<Integer> edge = iterator.next();
-                // 检查是否有任何节点已经匹配
+                // 检查是否已经选定的边是否与当前待入选的边连通
                 boolean hasMatchedNode = edge.stream().anyMatch(matchedNodes::contains);
 
                 if (hasMatchedNode) {
@@ -186,7 +187,7 @@ public class ExecutionPlanUtils {
         }
     }
 
-    // 计算 matched_edges 中有哪些边包含点 adj，然后从 edge_pos 中取出这些边和adj_label对应的 indices
+    // 计算 matched_edges 中包含点 adj 的数量，然后从 edge_pos 中取出这些边和adj_label对应的 indices
     public static Pair<Integer, List<Integer>> cal_degree_constraint(int adj, int adj_label, List<List<Integer>> matched_edges,
                                                                      Map<List<Integer>, Map<Integer, List<Integer>>> edge_pos,
                                                                      List<List<Integer>> adj_edges) {
@@ -205,17 +206,32 @@ public class ExecutionPlanUtils {
         return new Pair<>(degree, degree_indices);
     }
 
-    // 计算顶点 adj 在所有 matched_edges 中不在当前边 cur_edge 中的标签对应的位置索引。
+    /**
+     * 该方法为在 matched_edges 中找到非 adj 邻边包含的同标签顶点索引，也就是说在 adj 邻边中不会出现这些索引
+     * @param adj
+     * @param cur_edge
+     * @param adj_label
+     * @param matched_edges
+     * @param edge_pos
+     * @return
+     */
     public static List<Integer> cal_not_in_constraint(int adj, List<Integer> cur_edge, int adj_label,
                                                       List<List<Integer>> matched_edges, Map<List<Integer>, Map<Integer, List<Integer>>> edge_pos) {
         List<Integer> not_in_indices = new ArrayList<>();
 
+        /**
+         * 遍历所有已匹配的超边，找出那些与当前超边 cur_edge 不相邻（即不共享公共顶点 adj）的超边，记录标签为 adj_label 的顶点索引
+         * ‼️‼️‼️ 需要知道的是，满足 !intersection.contains(adj) 条件的 edge 与 cur_edge 可能有交点也可能没有交点
+         *    - 对于没有交点的情况，cur_edge 的候选超边一定没有与 edge 相同标签排列的邻边，可以作为标签约束
+         *    - 而对于存在其他交点的情况，cur_edge 的候选超边的邻边也可以拥有与 edge 相同标签排列的超边，不一定要作为标签约束，只能说在交点为 adj 的情况下标签约束才成立
+         */
         for (List<Integer> edge : matched_edges) {
             List<Integer> intersection = intersect(edge, cur_edge);
 
+            // TODO 我觉得要改成 intersection.size() != 0
             if (!intersection.contains(adj)) {
                 List<Integer> tempIndices = edge_pos.get(edge).get(adj_label);
-                if (tempIndices != null) {
+                if (tempIndices != null) { // 得到 edge 中与公共顶点 adj 标签相同的索引位置
                     not_in_indices.addAll(tempIndices);
                 }
             }
@@ -241,11 +257,13 @@ public class ExecutionPlanUtils {
         return Integer.compare(edge1.size(), edge2.size());
     }
 
+    // ‼️‼️‼️‼️ 作用的对象是部分查询当中的 last edge，计算其顶点在部分查询中的 标签、度数、以及相关联的边中的同标签顶点索引，其实就是在变相的计算 vertex profile
     public static NodeVerifier cal_node_filter(DynamicHyperGraph query_graph, List<List<Integer>> matched_edges,
                                                Map<List<Integer>, Map<Integer, List<Integer>>> edge_pos) {
         List<Integer> last_edge = matched_edges.get(matched_edges.size() - 1);
-        Map<Integer, List<List<Integer>>> node_to_edge_map = new HashMap<>(); // 构建节点到边的映射
+        Map<Integer, List<List<Integer>>> node_to_edge_map = new HashMap<>();
 
+        // 构建 last_edge 中顶点到查询超边的映射
         for (int n : last_edge) {
             for (List<Integer> matched_edge : matched_edges) {
                 if (matched_edge.contains(n)) {
@@ -253,7 +271,6 @@ public class ExecutionPlanUtils {
                 }
             }
         }
-
 
         Comparator<List<Integer>> lexComparator = (list1, list2) -> {
             if (list1 == null && list2 == null) return 0;
@@ -281,22 +298,21 @@ public class ExecutionPlanUtils {
             return Integer.compare(size1, size2);
         };
 
-        // 【新写的】
-        // // 过滤并处理节点与边
+        // 组织 last_edge 中是公共顶点的 顶点id、关联的边、顶点标签
         List<NodeEdgeLabel> node_to_edge_and_label = node_to_edge_map.entrySet().stream()
-                .filter(entry -> entry.getValue().size() > 1) // 过滤出连接到多于一条边的节点
+                .filter(entry -> entry.getValue().size() > 1)  // 该顶点至少存在于两条边中
                 .map(entry -> {
                     Integer nodeId = entry.getKey();
                     List<List<Integer>> edges = new ArrayList<>(entry.getValue());
                     // 对边列表进行排序，Java 中 List.sort() 默认是稳定排序
                     edges.sort(lexComparator);
-                    Integer label = query_graph.getNodeLabel(nodeId);
+                    int label = query_graph.getNodeLabel(nodeId);
                     return new NodeEdgeLabel(nodeId, edges, label);
                 })
                 .sorted() // 使用 NodeEdgeLabel 的 compareTo 方法
                 .collect(Collectors.toList());
 
-        // 根据边和标签对节点进行分组
+        // 根据边和标签对顶点进行分组。nodeGroups 的 key 是边和顶点标签，value 是顶点id
         Map<EdgeLabelKey, List<Integer>> nodeGroups = new HashMap<>();
         for (NodeEdgeLabel nel : node_to_edge_and_label) {
             Set<List<Integer>> edgesSet = new HashSet<>(nel.getEdges());
@@ -304,22 +320,23 @@ public class ExecutionPlanUtils {
             nodeGroups.computeIfAbsent(key, k -> new ArrayList<>()).add(nel.getNodeId());
         }
 
-        // 转换分组为包含 HashSet 的结构，并排序
+        // 将 nodeGroups 转换为列表，其中的每个元素是一条 entry 的组合对象
         List<GroupEntry> nodeGroupsVec = nodeGroups.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> new GroupEntry(entry.getKey().getEdges(), entry.getKey().getLabel(), entry.getValue()))
                 .collect(Collectors.toList());
 
-        // 构建 indices, degrees, len_s
-        List<List<Integer>> indices = new ArrayList<>();
-        List<Integer> degrees = new ArrayList<>();
-        List<Integer> len_s = new ArrayList<>();
-        for (GroupEntry group : nodeGroupsVec) {
-            Set<List<Integer>> edges = group.getEdges();
-            int label = group.getLabel();
-            List<Integer> nodes = group.getNodes();
+        // ‼️‼️‼️‼️ 同下标 i 下，表示有 nodeNum[i] 个顶点同时出现在 edgeNum[i] 条边里，indices[i] 则记录这些边里标签为 label 的顶点索引位置
+        List<List<Integer>> indices = new ArrayList<>();  // edge 中标签为 label 的索引位置
+        List<Integer> edgeNums = new ArrayList<>(); // edge 的数量
+        List<Integer> nodeNums = new ArrayList<>();   // node 的数量
 
-            List<Integer> index = edges.stream().flatMap(edge -> {
+        for (GroupEntry group : nodeGroupsVec) {
+            Set<List<Integer>> edges = group.getEdges(); // edges 为顶点所被包含的边
+            int label = group.getLabel(); // label 是 group 中顶点的标签
+            List<Integer> nodes = group.getNodes(); // nodes 中的顶点同时存在于 edges 中且顶点标签为 label
+
+            List<Integer> index = edges.stream().flatMap(edge -> {  // index 表示 group 里每条 edge 中标签为 label 的索引位置
                 Map<Integer, List<Integer>> posMap = edge_pos.get(edge);
                 if (posMap != null && posMap.containsKey(label)) {
                     return posMap.get(label).stream();
@@ -327,15 +344,16 @@ public class ExecutionPlanUtils {
                 return Stream.empty();
             }).sorted().collect(Collectors.toList());
 
-            int degree = edges.size();
-            int len = nodes.size();
+            int edgeNum = edges.size();
+            int nodeNum = nodes.size();
 
             indices.add(index);
-            degrees.add(degree);
-            len_s.add(len);
+            edgeNums.add(edgeNum);
+            nodeNums.add(nodeNum);
         }
 
-        // 构建 contains，会计算包含关系
+        // 构建 GroupEntry 之间标签相同，且 edges 为子集的包含关系
+        // contains 的长度和 nodeGroupsVec 的长度一样，idx=0 的值为当前 group 的 edgeSet 被其他索引位置的 group 的 edgeSet 包含，且顶点的标签相同
         List<List<Integer>> contains = new ArrayList<>();
         for (int i = 0; i < nodeGroupsVec.size(); i++) {
             GroupEntry groupEntry1 = nodeGroupsVec.get(i);
@@ -362,7 +380,7 @@ public class ExecutionPlanUtils {
             contains.add(contains_elem);
         }
 
-        return new NodeVerifier(indices, degrees, len_s, contains);
+        return new NodeVerifier(indices, edgeNums, nodeNums, contains);
     }
 
 

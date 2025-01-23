@@ -5,7 +5,6 @@ import zHGMatch.graph.PartitionedEdges;
 import zHGMatch.graph.QueryGraph;
 import zHGMatch.graph.util.Pair;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,41 +33,29 @@ public class MatchDriver {
             // TODO 超图同构啊啊啊
             // int num = query.to_graph().canonicalForm().automorphisms().count();
             System.out.println(num + " automorphism");
-            this.automorphism = num;
+            this.automorphism = Integer.MAX_VALUE;
         } else {
             System.out.println("Query is too large, computing automorphism skipped");
             this.automorphism = Integer.MAX_VALUE;
         }
     }
 
-    /**
-     * 获取自 Unix 纪元以来的当前时间，单位为微秒。
-     *
-     * @return 当前时间的微秒数
-     */
-    public static long getCurrentTimeMicros() {
-        Instant now = Instant.now();
-        long epochSecond = now.getEpochSecond(); // 自 Unix 纪元以来的秒数
-        int nano = now.getNano(); // 当前秒内的纳秒数
-        return epochSecond * 1_000_000 + nano / 1_000; // 转换为微秒
-    }
-
     public static void main(String[] args) {
-        long startMicros = getCurrentTimeMicros();
+        long startMicros = System.nanoTime();
 
         // 执行需要测量的操作
         for (int i = 0; i < 251; i++) {
             System.out.print(i);
         }
 
-        long endMicros = getCurrentTimeMicros();
-        long durationMicros = endMicros - startMicros;
+        double endMicros = System.nanoTime();
+        double durationMicros = (endMicros - startMicros) / 1_000_000_000.0;
 
-        System.out.println("\n操作耗时: " + durationMicros + " 微秒");
+        System.out.printf("\n操作耗时: %.6f 秒%n", durationMicros);
     }
 
     // limit 对应rust中option，MIN_VALUE 为 null
-    public Pair<Integer, Long> run(PartitionedEdges graph, int limit) {
+    public Pair<Integer, Long> run(PartitionedEdges data_graph, int limit) {
         System.out.println(this.name + " - Running query");
         int total_count = 0;
         long total_time = 0l;
@@ -77,7 +64,7 @@ public class MatchDriver {
             System.out.println("Plan " + i);
             ExecutionPlan current_plan = this.plan.get(i);
             // 取出的是数据图中 与匹配顺序第一条边的标签相同的边集合
-            EdgePartition edge_index = graph.get_partition(current_plan.getStartLabels());
+            EdgePartition edge_index = data_graph.get_partition(current_plan.getStartLabels());
 
             if (edge_index == null) {
                 System.out.println(this.name + " - First hyperedge not found, 0 embeddings");
@@ -95,24 +82,23 @@ public class MatchDriver {
 
             switch (extendersSize) {
                 case 1:
-                    countAndTime = run1(graph, limit, current_plan);
+                    countAndTime = run1(data_graph, limit, current_plan);
                     break;
-
                 case 2:
-                    countAndTime = run2(graph, limit, current_plan);
+                    countAndTime = run2(data_graph, limit, current_plan);
                     break;
                 case 3:
-                    countAndTime = run3(graph, limit, current_plan);
+                    countAndTime = run3(data_graph, limit, current_plan);
                     break;
                 case 4:
-                    countAndTime = run4(graph, limit, current_plan);
+                    countAndTime = run4(data_graph, limit, current_plan);
                     break;
                 case 5:
-                    countAndTime = run5(graph, limit, current_plan);
+                    countAndTime = run5(data_graph, limit, current_plan);
                     break;
                 default:
                     System.out.println("Work stealing not enabled");
-                    countAndTime = run_any(graph, limit, current_plan);
+                    countAndTime = run_any(data_graph, limit, current_plan);
                     break;
             }
 
@@ -124,7 +110,7 @@ public class MatchDriver {
     }
 
     public Pair<Integer, Long> run_any(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
 
         // 获取初始边的分区
         EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
@@ -186,25 +172,25 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run_any " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
     }
 
 
-    public Pair<Integer, Long> run1(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+    public Pair<Integer, Long> run1(PartitionedEdges data_graph, int limit, ExecutionPlan plan) {
+        long start = System.nanoTime();
 
         // 获取初始边的分区
-        EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
+        EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
         System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
 
         List<List<Integer>> edges = new ArrayList<>();
@@ -216,7 +202,7 @@ public class MatchDriver {
         // 并行处理分块
         List<Integer> dataflow = edges.parallelStream()
                 .map(partial -> {
-                    List<List<Integer>> results = plan.getExtenders().get(0).extend(partial, graph);
+                    List<List<Integer>> results = plan.getExtenders().get(0).extend(partial, data_graph);
                     if (this.print_results) {
                         for (List<Integer> result : results) {
                             System.out.println(split_results(result, plan.getResultArity()));
@@ -246,42 +232,42 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run1 " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
     }
 
-    public Pair<Integer, Long> run2(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+    public Pair<Integer, Long> run2(PartitionedEdges data_graph, int limit, ExecutionPlan plan) {
+        long start = System.nanoTime();
 
-        // 获取初始边的分区
-        EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
+        // ‼️‼️‼️‼️ 获取匹配顺序中第一条边的分区，且 edges 表示该分区里的全量边，也就是说对于第一条边暂时没有过滤规则
+        EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
         System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
 
-        List<List<Integer>> edges = new ArrayList<>();
+        List<List<Integer>> first_edge_candidate_edges = new ArrayList<>();
         for (int i = 0; i < edge_index.num_edges(); i++) {
             List<Integer> edge = edge_index.getEdge(i);
-            edges.add(edge);
+            first_edge_candidate_edges.add(edge);
         }
 
-        // 并行处理分块
-        List<Integer> dataflow = edges.parallelStream()
+        // 首先从第一条边的候选超边开始并行的进行扩展，注意，第一条边是全量的
+        List<Integer> dataflow = first_edge_candidate_edges.parallelStream()
                 // 第一次扩展
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, data_graph);
                     return extend.stream();
                 })
                 // 第二次扩展和计数
                 .map(partial -> {
-                    List<List<Integer>> results = plan.getExtenders().get(1).extend(partial, graph);
+                    List<List<Integer>> results = plan.getExtenders().get(1).extend(partial, data_graph);
                     if (this.print_results) {
                         for (List<Integer> result : results) {
                             System.out.println(split_results(result, plan.getResultArity()));
@@ -311,24 +297,24 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run2 " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
     }
 
-    public Pair<Integer, Long> run3(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+    public Pair<Integer, Long> run3(PartitionedEdges data_graph, int limit, ExecutionPlan plan) {
+        long start = System.nanoTime();
 
         // 获取初始边的分区
-        EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
+        EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
         System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
 
         List<List<Integer>> edges = new ArrayList<>();
@@ -393,17 +379,17 @@ public class MatchDriver {
         for (int i = 0; i < edges.size(); i++) {
             List<Integer> edge = edges.get(i);
             // 第一层扩展
-            List<List<Integer>> firstExtended = plan.getExtenders().get(0).extend(edge, graph);
+            List<List<Integer>> firstExtended = plan.getExtenders().get(0).extend(edge, data_graph);
 
             // 第二层扩展
             List<List<Integer>> secondExtended = new ArrayList<>();
             for (List<Integer> p : firstExtended) {
-                List<List<Integer>> extended = plan.getExtenders().get(1).extend(p, graph);
+                List<List<Integer>> extended = plan.getExtenders().get(1).extend(p, data_graph);
                 secondExtended.addAll(extended);
             }
 
             for (List<Integer> p : secondExtended) {
-                List<List<Integer>> results = plan.getExtenders().get(2).extend(p, graph);
+                List<List<Integer>> results = plan.getExtenders().get(2).extend(p, data_graph);
                 System.out.println("results.size(): " + results.size());
                 if (this.print_results) {
                     for (List<Integer> result : results) {
@@ -435,25 +421,24 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run3 " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
-
     }
 
-    public Pair<Integer, Long> run4(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+    public Pair<Integer, Long> run4(PartitionedEdges data_graph, int limit, ExecutionPlan plan) {
+        long start = System.nanoTime();
 
         // 获取初始边的分区
-        EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
+        EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
         System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
 
         List<List<Integer>> edges = new ArrayList<>();
@@ -466,20 +451,20 @@ public class MatchDriver {
         List<Integer> dataflow = edges.parallelStream()
                 // 第一次扩展
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, data_graph);
                     return extend.stream();
                 })
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(1).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(1).extend(partial, data_graph);
                     return extend.stream();
                 })
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(2).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(2).extend(partial, data_graph);
                     return extend.stream();
                 })
                 // 第二次扩展和计数
                 .map(partial -> {
-                    List<List<Integer>> results = plan.getExtenders().get(3).extend(partial, graph);
+                    List<List<Integer>> results = plan.getExtenders().get(3).extend(partial, data_graph);
                     if (this.print_results) {
                         for (List<Integer> result : results) {
                             System.out.println(split_results(result, plan.getResultArity()));
@@ -509,24 +494,24 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run4 " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
     }
 
-    public Pair<Integer, Long> run5(PartitionedEdges graph, int limit, ExecutionPlan plan) {
-        long start = System.currentTimeMillis();
+    public Pair<Integer, Long> run5(PartitionedEdges data_graph, int limit, ExecutionPlan plan) {
+        long start = System.nanoTime();
 
         // 获取初始边的分区
-        EdgePartition edge_index = graph.get_partition(plan.getStartLabels());
+        EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
         System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
 
         List<List<Integer>> edges = new ArrayList<>();
@@ -539,24 +524,24 @@ public class MatchDriver {
         List<Integer> dataflow = edges.parallelStream()
                 // 第一次扩展
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(0).extend(partial, data_graph);
                     return extend.stream();
                 })
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(1).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(1).extend(partial, data_graph);
                     return extend.stream();
                 })
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(2).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(2).extend(partial, data_graph);
                     return extend.stream();
                 })
                 .flatMap(partial -> {
-                    List<List<Integer>> extend = plan.getExtenders().get(3).extend(partial, graph);
+                    List<List<Integer>> extend = plan.getExtenders().get(3).extend(partial, data_graph);
                     return extend.stream();
                 })
                 // 第二次扩展和计数
                 .map(partial -> {
-                    List<List<Integer>> results = plan.getExtenders().get(4).extend(partial, graph);
+                    List<List<Integer>> results = plan.getExtenders().get(4).extend(partial, data_graph);
                     if (this.print_results) {
                         for (List<Integer> result : results) {
                             System.out.println(split_results(result, plan.getResultArity()));
@@ -586,20 +571,18 @@ public class MatchDriver {
             sum = dataflow.stream().mapToInt(Integer::intValue).sum();
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.nanoTime();
 
-        System.out.println(name + " - Computed in " + (end - start) + " ms, " + sum + " embeddings");
+        System.out.println(name + " - Computed in " + (end - start) + " us, " + sum + " embeddings");
 
         if (this.automorphism != Integer.MIN_VALUE) { // 这里也是模拟Rust中的option，判断automorphism是不是空值
             System.out.println("run5 " + name + " - " + (sum * this.automorphism) +
                     " embeddings with symmetry (assuming no edge automorphism)\n");
         }
 
-        // 返回的时间是毫秒
+        // 返回的时间是微秒
         return new Pair<>(sum, (end - start));
     }
-
-
 
     /**
      * 拆分结果，基于结果的 arity。
