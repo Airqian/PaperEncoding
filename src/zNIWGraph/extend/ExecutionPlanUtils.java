@@ -129,7 +129,7 @@ public class ExecutionPlanUtils {
             sum += num;
             System.out.println("查询超边： " + edge + " 候选集数量为：" + num);
         }
-        System.out.println("该查询图的候选集大小总和为：" + sum);
+        System.out.println("该查询图的候选集大小总和为：" + sum + "\n");
     }
 
     // 假设 edges 中不存在重复的边，生成 edges 的全排列

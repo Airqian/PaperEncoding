@@ -9,6 +9,7 @@ import zNIWGraph.graph.NIWHypergraph;
 import zNIWGraph.graph.PartitionedEdges;
 import zNIWGraph.graph.QueryGraph;
 import zNIWGraph.graph.util.Pair;
+import zNIWGraph.index.IntersectionLabelGraph;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -37,9 +38,11 @@ public class NIWExecutor {
         // 读取数据集文件
         Pair<PartitionedEdges, NIWHypergraph> pair = read_text_to_graph(node_path, edge_path);
         PartitionedEdges data_graph = pair.getKey();
-        NIWHypergraph dataHypergraph = pair.getValue();  // 里面包含超边id、顶点倒排索引
+        NIWHypergraph niwHypergraph = pair.getValue();  // 里面包含超边id、顶点倒排索引
+        IntersectionLabelGraph intersectionLabelGraph = niwHypergraph.build_weighted_graph_inverted();
 
         data_graph.status();
+        intersectionLabelGraph.status();
 
         int total_count = 0;
         long total_time = 0l;
@@ -111,16 +114,12 @@ public class NIWExecutor {
             System.out.println("Reading node labels");
 
             List<Integer> nodeLabels = new ArrayList<>();
-            Map<Integer, Integer> graphNodeLabels = new HashMap<>();  // 读取超图的节点标签
             String line;
-            int i = 1;
             while ((line = nodeReader.readLine()) != null) {
                 line = line.trim();
                 if (!line.isEmpty()) {
                     int label = Integer.parseInt(line);
                     nodeLabels.add(label);
-                    graphNodeLabels.put(i, label);
-                    i++;
                 }
             }
 
@@ -128,7 +127,7 @@ public class NIWExecutor {
             System.out.println("Reading edges");
             PartitionedEdges edgeIndex = new PartitionedEdges(nodeLabels);
 
-            i = 1;
+            int i = 1;
             while ((line = edgeReader.readLine()) != null) {
                 line = line.trim();
 

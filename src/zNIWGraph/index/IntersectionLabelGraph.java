@@ -1,5 +1,6 @@
 package zNIWGraph.index;
 
+import zNIWGraph.graph.MapMemorySizeCalculator;
 import zNIWGraph.graph.util.Pair;
 
 import java.util.HashMap;
@@ -17,14 +18,15 @@ import java.util.Set;
 public class IntersectionLabelGraph {
     private Map<Integer, Map<Integer, Integer>> vertexNumWGraph; // id -> <id, vertexNum>
 
-    private Map<Integer, Map<Integer, List<Pair>>> labelWGraph; // id -> <id, <label, num>...>
+    private Map<Integer, Map<Integer, Map<Integer, Integer>>> labelWGraph; // id -> <id, <label, num>...>
 
     public IntersectionLabelGraph() {
         vertexNumWGraph = new HashMap<>();
         labelWGraph = new HashMap<>();
     }
 
-    public IntersectionLabelGraph(Map<Integer, Map<Integer, Integer>> vertexNumWGraph, Map<Integer, Map<Integer, List<Pair>>> labelWGraph) {
+    public IntersectionLabelGraph(Map<Integer, Map<Integer, Integer>> vertexNumWGraph,
+                                  Map<Integer, Map<Integer, Map<Integer, Integer>>> labelWGraph) {
         this.vertexNumWGraph = vertexNumWGraph;
         this.labelWGraph = labelWGraph;
     }
@@ -33,14 +35,13 @@ public class IntersectionLabelGraph {
         return this.vertexNumWGraph;
     }
 
-    public Map<Integer, Map<Integer, List<Pair>>> getLabelWGraph() {
+    public Map<Integer, Map<Integer, Map<Integer, Integer>>> getLabelWGraph() {
         return this.labelWGraph;
     }
 
-
-    public boolean isNeighbor(int queryEdgeId, int neighborEdgeId) {
-        return vertexNumWGraph.get(queryEdgeId).containsKey(neighborEdgeId);
+    public void status() {
+        long totalBytes = MapMemorySizeCalculator.calculateMapSize(this.labelWGraph);
+        double totalKB = (double) totalBytes / 1024;
+        System.out.printf("二元邻居权重图占用的空间大小约为 %.2f KB\n\n", totalKB);
     }
-
-
 }

@@ -1,8 +1,12 @@
 package zNIWGraph.graph;
 
 import zHyperISO.WeightedGraph;
+import zNIWGraph.graph.util.Pair;
+import zNIWGraph.index.IntersectionLabelGraph;
 
+import javax.crypto.spec.OAEPParameterSpec;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class NIWHypergraph {
     private List<Integer> nodeLabels;     // 顶点标签map
@@ -24,16 +28,16 @@ public class NIWHypergraph {
     }
 
     // 构建二元邻居交叉权重图
-    public WeightedGraph build_weighted_graph_inverted() {
+    public IntersectionLabelGraph build_weighted_graph_inverted() {
         long start = System.nanoTime();
 
         Map<Integer, Map<Integer, Integer>> vertexNumWGraph = new HashMap<>();
-        Map<Integer, Map<Integer, Set<Integer>>> labelWGraph = new HashMap<>();
+        Map<Integer, Map<Integer, Map<Integer, Integer>>> labelWGraph = new HashMap<>();
 
         // 遍历倒排索引计算公共顶点数
         for (Map.Entry<Integer, Set<Integer>> entry : vertexToEdges.entrySet()) {
-            int vertex = entry.getKey(); // 公共顶点
-            Set<Integer> hyperedges = entry.getValue();
+            int vertex = entry.getKey(); // 公共顶点id
+            Set<Integer> hyperedges = entry.getValue(); // 公共顶点所在超边id列表
 
             // 遍历超边集合中的所有超边对
             List<Integer> hyperedgeList = new ArrayList<>(hyperedges);
@@ -45,26 +49,51 @@ public class NIWHypergraph {
                     // 更新图中的公共顶点数
                     vertexNumWGraph.computeIfAbsent(hyperedge1, k -> new HashMap<>());
                     vertexNumWGraph.computeIfAbsent(hyperedge2, k -> new HashMap<>());
-                    labelWGraph.putIfAbsent(hyperedge1, new HashMap<>());
-                    labelWGraph.get(hyperedge1).putIfAbsent(hyperedge2, new HashSet<>());
-                    labelWGraph.putIfAbsent(hyperedge2, new HashMap<>());
-                    labelWGraph.get(hyperedge2).putIfAbsent(hyperedge1, new HashSet<>());
+
 
                     // 计算公共顶点数
                     int commonVerticesCount = vertexNumWGraph.get(hyperedge1).getOrDefault(hyperedge2, 0) + 1;
 
-                    // 更新边权重图
+                    // 更新二元邻居交叉权重图
                     vertexNumWGraph.get(hyperedge1).put(hyperedge2, commonVerticesCount);
                     vertexNumWGraph.get(hyperedge2).put(hyperedge1, commonVerticesCount);
-                    labelWGraph.get(hyperedge1).get(hyperedge2).add(this.getNodeLabel(vertex));
-                    labelWGraph.get(hyperedge2).get(hyperedge1).add(this.getNodeLabel(vertex));
+
+                    if (!labelWGraph.containsKey(hyperedge1) || !labelWGraph.get(hyperedge1).containsKey(hyperedge2)) {
+                        // 计算两条超边的公共标签
+                        labelWGraph.putIfAbsent(hyperedge1, new HashMap<>());
+                        labelWGraph.get(hyperedge1).putIfAbsent(hyperedge2, new HashMap<>());
+                        labelWGraph.putIfAbsent(hyperedge2, new HashMap<>());
+                        labelWGraph.get(hyperedge2).putIfAbsent(hyperedge1, new HashMap<>());
+                        labelWGraph.get(hyperedge1).put(hyperedge2, computeNeighborLabel(hyperedge1, hyperedge2));
+                    }
                 }
             }
         }
         long end = System.nanoTime();
         System.out.printf("--- build_weighted_graph_inverted: %.2fms\n", ((end - start) * 1.0 / 1000_1000));
 
-        return new WeightedGraph(vertexNumWGraph, labelWGraph);
+        return new IntersectionLabelGraph(vertexNumWGraph, labelWGraph);
+    }
+
+    private Map<Integer, Integer> computeNeighborLabel(int hyperedge1, int hyperedge2) {
+        Map<Integer, Integer> map = new HashMap<>();
+        List<Integer> edge1 = this.idToEdge.get(hyperedge1);
+        List<Integer> edge2 = this.idToEdge.get(hyperedge2);
+
+        Set<Integer> set = new HashSet<>(edge1);
+        Set<Integer> commonVertex = new HashSet<>();
+        for (int num : edge2) {
+            if (set.contains(num) &&!commonVertex.contains(num)) {
+                commonVertex.add(num);
+            }
+        }
+
+        List<Integer> labelList = commonVertex.stream().map(i -> this.nodeLabels.get(i - 1)).collect(Collectors.toList());
+        for (int label : labelList) {
+            map.put(label, map.getOrDefault(label, 0) + 1);
+        }
+
+        return map;
     }
 
     public int getNodeLabel(int vertexId) {

@@ -6,7 +6,7 @@ import java.util.*;
 public class PartitionedEdges {
     private List<Integer> nodeLabels;
 
-    private HashMap<List<Integer>, EdgePartition> map; // map 就是边标签到边的分区，key相当于分区签名，详细信息保存在value里，value包括了该分区内的所有边
+    private Map<List<Integer>, EdgePartition> map; // map 就是边标签到边的分区，key相当于分区签名，详细信息保存在value里，value包括了该分区内的所有边
 
     public PartitionedEdges(List<Integer> nodeLabels) {
         this.nodeLabels = nodeLabels;
@@ -123,22 +123,22 @@ public class PartitionedEdges {
 
     // 输出状态信息的方法，对应原Rust代码中的status方法
     public void status() {
-        System.out.println("Number of nodes: " + num_nodes());
-        System.out.println("Number of edges: " + num_edges());
-        System.out.println("Distinct edge labels: " + this.map.size());
-
-        int minArity = Integer.MAX_VALUE;
-        int maxArity = Integer.MIN_VALUE;
-        for (List<Integer> key : this.map.keySet()) {
-            minArity = Math.min(key.size(), minArity);
-            maxArity = Math.max(key.size(), maxArity);
-        }
-
-        System.out.println("Min/Max arity：" + minArity + "," + maxArity);
+//        System.out.println("Number of nodes: " + num_nodes());
+//        System.out.println("Number of edges: " + num_edges());
+//        System.out.println("Distinct edge labels: " + this.map.size());
+//
+//        int minArity = Integer.MAX_VALUE;
+//        int maxArity = Integer.MIN_VALUE;
+//        for (List<Integer> key : this.map.keySet()) {
+//            minArity = Math.min(key.size(), minArity);
+//            maxArity = Math.max(key.size(), maxArity);
+//        }
+//
+//        System.out.println("Min/Max arity：" + minArity + "," + maxArity);
 
         double graph_size = graph_size() * 1.0 / 1000;
         double index_size = index_size() * 1.0 / 1000;
-        System.out.printf("Graph Size = %.1f KB, Index Size = %.1f KB\n", graph_size, index_size);
+        System.out.printf("HGMatch Graph Size = %.1f KB, HGMatch Index Size = %.1f KB\n", graph_size, index_size);
     }
 
     public static void main(String[] args) {

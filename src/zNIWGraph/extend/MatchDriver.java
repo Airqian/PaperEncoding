@@ -29,14 +29,13 @@ public class MatchDriver {
         this.print_results = printResults;
 
         if (query.num_nodes() <= MAX_NUM_NODE_AUTOMORPHISM) {
-            System.out.println("Computing number of automorphism");
+            // System.out.println("Computing number of automorphism");
             int num = 0;
-            // TODO 超图同构啊啊啊
             // int num = query.to_graph().canonicalForm().automorphisms().count();
             System.out.println(num + " automorphism");
             this.automorphism = Integer.MAX_VALUE;
         } else {
-            System.out.println("Query is too large, computing automorphism skipped");
+            // System.out.println("Query is too large, computing automorphism skipped");
             this.automorphism = Integer.MAX_VALUE;
         }
     }
