@@ -1,9 +1,9 @@
-package zHGMatch.extend;
+package zNIWGraph.extend;
 
-import zHGMatch.graph.DynamicHyperGraph;
-import zHGMatch.graph.PartitionedEdges;
-import zHGMatch.graph.QueryGraph;
-import zHGMatch.graph.util.Pair;
+import zNIWGraph.graph.DynamicHyperGraph;
+import zNIWGraph.graph.PartitionedEdges;
+import zNIWGraph.graph.QueryGraph;
+import zNIWGraph.graph.util.Pair;
 
 import java.util.*;
 import java.util.logging.Logger;

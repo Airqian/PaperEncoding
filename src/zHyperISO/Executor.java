@@ -30,9 +30,17 @@ public class Executor {
 
         boolean ifUseInverted = true;
         for (int i = 0; i < num_of_queries; i++) {
+            long start = System.nanoTime();
             Hypergraph queryGraph = queryGraphs.get(i);
 
             Map<Integer, Set<Integer>> candidates = HFilter.generateCandidates(dataGraph, queryGraph, ifUseInverted);
+            List<Integer> matchingOrder = HOrder.vertexPriorityOrder(queryGraph, candidates);
+            List<Map<Integer, Integer>> embeddings = deduplicateEmbeddings(DualEnumMatcher.match(queryGraph, dataGraph, candidates, matchingOrder));
+
+            long end = System.nanoTime();
+            double time = (end - start) / 1_000_000_000.0;
+            System.out.printf("query " + i + " Total Time: %.6fs\n", time);
+            System.out.println(embeddings);
         }
     }
 
@@ -116,5 +124,27 @@ public class Executor {
         }
     }
 
+    public static List<Map<Integer, Integer>> deduplicateEmbeddings(List<Map<Integer, Integer>> embeddings) {
+        Set<String> seen = new HashSet<>();  // 用于存储已遇到的Map的字符串表示
+        List<Map<Integer, Integer>> uniqueEmbeddings = new ArrayList<>();
 
+        for (Map<Integer, Integer> map : embeddings) {
+            String mapString = mapToString(map);  // 将Map转换为String表示
+            if (!seen.contains(mapString)) {     // 检查该Map是否已经存在
+                seen.add(mapString);             // 添加到已见集合
+                uniqueEmbeddings.add(map);       // 添加到去重后的列表
+            }
+        }
+
+        return uniqueEmbeddings;  // 返回去重后的列表
+    }
+
+    // 将Map转化为String表示，确保每个Map有唯一的字符串表示
+    private static String mapToString(Map<Integer, Integer> map) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+            sb.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
+        }
+        return sb.toString();
+    }
 }

@@ -20,14 +20,6 @@ public class WeightedGraph {
         this.labelWGraph = labelWGraph;
     }
 
-    // 给定查询超边获得其初始候选集，目前是用的最野蛮的方法，即遍历权重图
-    public List<Integer> getInitialCandidates(List<Integer> hyperedge) {
-
-
-
-        return new ArrayList<>();
-    }
-
     public Map<Integer, Map<Integer, Integer>> getvertexNumWGraph() {
         return this.vertexNumWGraph;
     }

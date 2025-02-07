@@ -11,8 +11,8 @@ class Hypergraph {
     private Map<Integer, Integer> nodeLabels;
     private Map<Integer, List<Integer>> hyperedges; // key 是超边id
     private Map<Integer, Set<Integer>> invertedIndex;  // 顶点到超边的倒排索引
-    private Map<Integer, Integer> edgeLabels;   // 超边标签（暂时没用）
 
+    private WeightedGraph weightedGraph;
 
     public Hypergraph() {
 
@@ -37,6 +37,7 @@ class Hypergraph {
                 neighbors.add(otherHe);
             }
         }
+
         return neighbors;
     }
 
@@ -139,7 +140,7 @@ class Hypergraph {
             }
         }
         long end = System.nanoTime();
-        System.out.printf("--- build_weighted_graph_inverted: %.2fms", ((end - start) * 1.0 / 1000_1000));
+        System.out.printf("--- build_weighted_graph_inverted: %.2fms\n", ((end - start) * 1.0 / 1000_1000));
 
         return new WeightedGraph(vertexNumWGraph, labelWGraph);
     }
@@ -150,6 +151,17 @@ class Hypergraph {
 
     public int getVertexNum(int hyperedgeId) {
         return this.hyperedges.get(hyperedgeId).size();
+    }
+
+    public List<Integer> getEdgeLabels(int edgeId) {
+        List<Integer> labels = new ArrayList<>();
+        for (int v : hyperedges.get(edgeId))
+            labels.add(getNodeLabel(v));
+        return labels;
+    }
+
+    public boolean containsVertex(int edgeId, int v) {
+        return hyperedges.get(edgeId).contains(v);
     }
 
     public int num_edges() {
@@ -207,13 +219,21 @@ class Hypergraph {
         return nodeLabels;
     }
 
+    public void setWeightedGraph(WeightedGraph weightedGraph) {
+        this.weightedGraph = weightedGraph;
+    }
+
+    public WeightedGraph getWeightedGraph() {
+        return weightedGraph;
+    }
+
     // 静态方法，用于从 JSONObject 创建 GraphData 实例
     public static Hypergraph fromJSONObject(JSONObject obj) {
         JSONArray labelsArray = obj.getJSONArray("labels"); // 读取顶点标签
         Map<Integer, Integer> nodeLabels = new HashMap<>();
 
         for (int i = 0; i < labelsArray.length(); i++) {
-            nodeLabels.put(i+1, labelsArray.getInt(i));
+            nodeLabels.put(i, labelsArray.getInt(i));
         }
 
         JSONArray edgesArray = obj.getJSONArray("edges");  // 读取各条超边并构建顶点到超边的倒排索引

@@ -1,30 +1,29 @@
-package zHGMatch;
+package zNIWGraph;
 
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import zHGMatch.extend.ExecutionPlan;
-import zHGMatch.extend.MatchDriver;
-import zHGMatch.graph.PartitionedEdges;
-import zHGMatch.graph.QueryGraph;
-import zHGMatch.graph.util.Pair;
+import zNIWGraph.extend.ExecutionPlan;
+import zNIWGraph.extend.MatchDriver;
+import zNIWGraph.graph.NIWHypergraph;
+import zNIWGraph.graph.PartitionedEdges;
+import zNIWGraph.graph.QueryGraph;
+import zNIWGraph.graph.util.Pair;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Executor {
-    private static final Logger logger = Logger.getLogger(Executor.class.getName());
+public class NIWExecutor {
+    private static final Logger logger = Logger.getLogger(NIWExecutor.class.getName());
 
-    private final static String node_path = "src/zHGMatch/data/house-committees/node-labels-house-committees.txt";
-    private final static String edge_path = "src/zHGMatch/data/house-committees/hyperedges-house-committees.txt";
-    private final static String query_path = "src/zHGMatch/data/house-committees/query.txt";
+    private final static String node_path = "src/zNIWGraph/data/house-committees/node-labels-house-committees.txt";
+    private final static String edge_path = "src/zNIWGraph/data/house-committees/hyperedge-removeduplicate.txt";
+    private final static String query_path = "src/zNIWGraph/data/house-committees/query.txt";
 
     public static void main(String[] args) {
         run_query();
@@ -36,7 +35,10 @@ public class Executor {
         int num_of_queries = queryGraphs.size();
 
         // 读取数据集文件
-        PartitionedEdges data_graph = read_text_to_graph(node_path, edge_path);
+        Pair<PartitionedEdges, NIWHypergraph> pair = read_text_to_graph(node_path, edge_path);
+        PartitionedEdges data_graph = pair.getKey();
+        NIWHypergraph dataHypergraph = pair.getValue();  // 里面包含超边id、顶点倒排索引
+
         data_graph.status();
 
         int total_count = 0;
@@ -96,48 +98,73 @@ public class Executor {
         return queryGraphs;
     }
 
-    public static PartitionedEdges read_text_to_graph(String node_path, String edge_path) {
+    // 读取数据超图并建立超边映射与顶点到超边的倒排索引
+    public static Pair<PartitionedEdges, NIWHypergraph> read_text_to_graph(String node_path, String edge_path) {
         // 打开节点和边文件
         try (BufferedReader nodeReader = new BufferedReader(new FileReader(node_path));
              BufferedReader edgeReader = new BufferedReader(new FileReader(edge_path))) {
+            Map<Integer, List<Integer>> idToEdge = new HashMap<>();
+            Map<List<Integer>, Integer> edgeToId = new HashMap<>();
+            Map<Integer, Set<Integer>> vertexToEdges = new HashMap<>();
+
+            // 读取节点标签，节点的标签是从 0 开始计数
             System.out.println("Reading node labels");
 
-            // 读取节点标签
             List<Integer> nodeLabels = new ArrayList<>();
+            Map<Integer, Integer> graphNodeLabels = new HashMap<>();  // 读取超图的节点标签
             String line;
+            int i = 1;
             while ((line = nodeReader.readLine()) != null) {
                 line = line.trim();
                 if (!line.isEmpty()) {
-                    int id = Integer.parseInt(line);
-                    nodeLabels.add(id);
+                    int label = Integer.parseInt(line);
+                    nodeLabels.add(label);
+                    graphNodeLabels.put(i, label);
+                    i++;
                 }
             }
 
+            // 读取超边
             System.out.println("Reading edges");
-            // 读取边
             PartitionedEdges edgeIndex = new PartitionedEdges(nodeLabels);
 
+            i = 1;
             while ((line = edgeReader.readLine()) != null) {
                 line = line.trim();
+
                 if (!line.isEmpty()) {
                     String[] parts = line.split(",");
                     List<Integer> edge = new ArrayList<>();
+
                     for (String part : parts) {
-                        int id = Integer.parseInt(part.trim());
-                        edge.add(id);
+                        int vertexId = Integer.parseInt(part.trim());
+                        vertexToEdges.putIfAbsent(vertexId, new HashSet<>());
+                        vertexToEdges.get(vertexId).add(i);
+                        edge.add(vertexId);
                     }
+
                     edgeIndex.add_edge(edge);
+
+                    // 构建超边到id、id到超边的映射map
+                    edgeToId.put(edge, i);
+                    idToEdge.put(i, edge);
+
+                    i++;
                 }
             }
 
-            System.out.println("Building graph");
-            edgeIndex.build_index();
+            NIWHypergraph hyperGraph = new NIWHypergraph(idToEdge, edgeToId, vertexToEdges, nodeLabels);
 
-            return edgeIndex;
+            System.out.println("Building graph");
+            edgeIndex.build_index(); // 超边分区索引
+
+            return new Pair<>(edgeIndex, hyperGraph);
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+
 }
