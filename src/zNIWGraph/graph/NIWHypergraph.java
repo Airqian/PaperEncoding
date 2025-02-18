@@ -1,14 +1,13 @@
 package zNIWGraph.graph;
 
-import zHyperISO.WeightedGraph;
-import zNIWGraph.graph.util.Pair;
 import zNIWGraph.index.IntersectionLabelGraph;
 
-import javax.crypto.spec.OAEPParameterSpec;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class NIWHypergraph {
+    private boolean ifQueryGraph;
+
     private List<Integer> nodeLabels;     // 顶点标签map
 
     private Map<Integer, List<Integer>> idToEdge;         // 超边id到超边的映射map
@@ -39,6 +38,9 @@ public class NIWHypergraph {
             int vertex = entry.getKey(); // 公共顶点id
             Set<Integer> hyperedges = entry.getValue(); // 公共顶点所在超边id列表
 
+            if (hyperedges.size() == 1)
+                continue;
+
             // 遍历超边集合中的所有超边对
             List<Integer> hyperedgeList = new ArrayList<>(hyperedges);
             for (int i = 0; i < hyperedgeList.size(); i++) {
@@ -64,13 +66,16 @@ public class NIWHypergraph {
                         labelWGraph.get(hyperedge1).putIfAbsent(hyperedge2, new HashMap<>());
                         labelWGraph.putIfAbsent(hyperedge2, new HashMap<>());
                         labelWGraph.get(hyperedge2).putIfAbsent(hyperedge1, new HashMap<>());
-                        labelWGraph.get(hyperedge1).put(hyperedge2, computeNeighborLabel(hyperedge1, hyperedge2));
+
+                        Map<Integer, Integer> neighborLabelMap = computeNeighborLabel(hyperedge1, hyperedge2);
+                        labelWGraph.get(hyperedge1).put(hyperedge2, neighborLabelMap);
+                        labelWGraph.get(hyperedge2).put(hyperedge1, neighborLabelMap);
                     }
                 }
             }
         }
         long end = System.nanoTime();
-        System.out.printf("--- build_weighted_graph_inverted: %.2fms\n", ((end - start) * 1.0 / 1000_1000));
+        System.out.printf("%.2fms\n", ((end - start) * 1.0 / 1000_1000));
 
         return new IntersectionLabelGraph(vertexNumWGraph, labelWGraph);
     }
@@ -88,7 +93,9 @@ public class NIWHypergraph {
             }
         }
 
-        List<Integer> labelList = commonVertex.stream().map(i -> this.nodeLabels.get(i - 1)).collect(Collectors.toList());
+        List<Integer> labelList = this.ifQueryGraph == true ? commonVertex.stream().map(i -> this.nodeLabels.get(i)).collect(Collectors.toList()) :
+                commonVertex.stream().map(i -> this.nodeLabels.get(i - 1)).collect(Collectors.toList());
+
         for (int label : labelList) {
             map.put(label, map.getOrDefault(label, 0) + 1);
         }
@@ -96,7 +103,23 @@ public class NIWHypergraph {
         return map;
     }
 
-    public int getNodeLabel(int vertexId) {
+    public List<Integer> getEdge(int id) {
+        return this.idToEdge.get(id);
+    }
+
+    // edgeToId在中间有变化
+    public int getEdgeId(List<Integer> edge) {
+        int edgeId = 0;
+        if (this.edgeToId != null)
+            edgeId = this.edgeToId.get(edge);
+        return edgeId;
+    }
+
+    public int getDataNodeLabel(int vertexId) {
+        return this.nodeLabels.get(vertexId - 1);
+    }
+
+    public int getQueryNodeLabel(int vertexId) {
         return this.nodeLabels.get(vertexId);
     }
 
@@ -110,5 +133,17 @@ public class NIWHypergraph {
 
     public void setVertexToEdges(Map<Integer, Set<Integer>> vertexToEdges) {
         this.vertexToEdges = vertexToEdges;
+    }
+
+    public void setIfQueryGraph(boolean ifQueryGraph) {
+        this.ifQueryGraph = ifQueryGraph;
+    }
+
+    public Map<List<Integer>, Integer> getEdgeToId() {
+        return edgeToId;
+    }
+
+    public Map<Integer, List<Integer>> getIdToEdge() {
+        return idToEdge;
     }
 }

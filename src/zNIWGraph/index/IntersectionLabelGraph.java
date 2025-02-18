@@ -1,12 +1,7 @@
 package zNIWGraph.index;
 
-import zNIWGraph.graph.MapMemorySizeCalculator;
-import zNIWGraph.graph.util.Pair;
-
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 实现一个二元邻居交叉权重图，其中顶点为超边id，图中的边为两条超边公共顶点标签到数量的映射列表，数据图和查询图都可以构建二元邻居交叉权重图
@@ -31,6 +26,22 @@ public class IntersectionLabelGraph {
         this.labelWGraph = labelWGraph;
     }
 
+    public int getCommonVertexNum(int edge1, int edge2) {
+        return this.vertexNumWGraph.get(edge1).get(edge2);
+    }
+    public Map<Integer, Integer> getCommonLabel(int edge1, int edge2) {
+        return this.labelWGraph.get(edge1).get(edge2);
+    }
+
+    public Map<Integer, Integer> getVertexNumNeighbors(int edgeId) {
+        return this.vertexNumWGraph.get(edgeId);
+    }
+
+    public Map<Integer, Map<Integer, Integer>> getLabelNeighbors(int edgeId) {
+        return this.labelWGraph.get(edgeId);
+    }
+
+
     public Map<Integer, Map<Integer, Integer>> getVertexNumWGraph() {
         return this.vertexNumWGraph;
     }
@@ -39,9 +50,20 @@ public class IntersectionLabelGraph {
         return this.labelWGraph;
     }
 
-    public void status() {
-        long totalBytes = MapMemorySizeCalculator.calculateMapSize(this.labelWGraph);
-        double totalKB = (double) totalBytes / 1024;
-        System.out.printf("二元邻居权重图占用的空间大小约为 %.2f KB\n\n", totalKB);
+    public double status() {
+//        long totalBytes = WeightedGraphSizeCalculator.calculateSize(this.labelWGraph);
+//        double totalKB = (double) totalBytes / 1024;
+        int intSize = Integer.BYTES;
+        int total = 0;
+        for (Map.Entry<Integer, Map<Integer, Map<Integer, Integer>>> entry : labelWGraph.entrySet()) {
+            for (Map.Entry<Integer, Map<Integer, Integer>> entry1 : entry.getValue().entrySet()) {
+                total += entry1.getValue().size();
+            }
+        }
+
+        double totalKB = total * intSize / 1000.0;
+
+
+        return totalKB;
     }
 }

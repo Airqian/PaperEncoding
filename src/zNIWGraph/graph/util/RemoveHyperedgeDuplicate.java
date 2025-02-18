@@ -6,9 +6,10 @@ import java.util.Set;
 
 public class RemoveHyperedgeDuplicate {
     public static void main(String[] args) throws IOException {
+        String path = "/Users/wqian/Coding/Java/PaperCoding/src/dataset/hypergraph/WT/";
         // 对超边进行去重
         // 读取文件
-        File inputFile = new File("/Users/wqian/Coding/Java/PaperCoding/src/zNIWGraph/data/house-committees/hyperedges-house-committees.txt");  // 假设文件名为 edges.txt
+        File inputFile = new File(path + "hyperedges-walmart-trips.txt");  // 假设文件名为 edges.txt
         BufferedReader reader = new BufferedReader(new FileReader(inputFile));
 
         Set<String> uniqueEdges = new HashSet<>();  // 用于去重
@@ -32,7 +33,7 @@ public class RemoveHyperedgeDuplicate {
         reader.close();
 
         // 如果需要保存去重后的数据到新文件
-        File outputFile = new File("/Users/wqian/Coding/Java/PaperCoding/src/zNIWGraph/data/house-committees/hyperedge-removeduplicate.txt");
+        File outputFile = new File(path + "hyperedge-removeduplicate.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
 
         for (String edge : uniqueEdges) {

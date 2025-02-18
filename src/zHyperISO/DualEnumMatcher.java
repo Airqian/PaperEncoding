@@ -198,7 +198,10 @@ public class DualEnumMatcher {
                 } else
                     contains.add(v);
             }
-            vertexOrder.addAll(vertexNum + 1, contains);
+            if (vertexOrder.size() <= vertexNum + 1)
+                vertexOrder.addAll(vertexNum, contains);
+            else
+                vertexOrder.addAll(vertexNum + 1, contains);
             vertexNum += edge.size();
         }
 

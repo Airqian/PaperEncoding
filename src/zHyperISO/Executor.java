@@ -13,9 +13,9 @@ import java.util.*;
 import java.util.logging.Level;
 
 public class Executor {
-    private final static String node_path = "src/zHGMatch/data/house-committees/node-labels-house-committees.txt";
-    private final static String edge_path = "src/zHGMatch/data/house-committees/hyperedges-house-committees.txt";
-    private final static String query_path = "src/zHGMatch/data/house-committees/query.txt";
+    private final static String node_path = "src/dataset/hypergraph/HC/node-labels-house-committees.txt";
+    private final static String edge_path = "src/dataset/hypergraph/HC/hyperedge-removeduplicate.txt";
+    private final static String query_path = "src/dataset/hypergraph/HC/m_6_l.txt";
 
     public static void main(String[] args) {
         run_query();

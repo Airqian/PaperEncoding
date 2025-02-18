@@ -55,7 +55,7 @@ public class PartitionedEdges {
     }
 
     // 添加一条边，将处理后的边添加到合适的EdgePartition分区中
-    public void add_edge(List<Integer> edge) {
+    public List<Integer> add_edge(List<Integer> edge) {
         // 1. 将 edge 变成一个去重后的有序状态
         //    去重的原因是因为超边中没有重复的顶点（顶点id不能重复），但是顶点的标签是可以重复的
         edge.sort(Integer::compareTo);
@@ -94,6 +94,8 @@ public class PartitionedEdges {
         EdgePartition edgePartition = this.map.getOrDefault(labelVec, new EdgePartition(labels));
         this.map.put(labelVec, edgePartition);
         edgePartition.addEdge(newEdge);
+
+        return newEdge;
     }
 
     public void sort_index(boolean build_index) {
@@ -141,19 +143,7 @@ public class PartitionedEdges {
         System.out.printf("HGMatch Graph Size = %.1f KB, HGMatch Index Size = %.1f KB\n", graph_size, index_size);
     }
 
-    public static void main(String[] args) {
-        // 测试通过
-        List<Integer> labels = new ArrayList<>(Arrays.asList(0,0,0,0,1));
-        PartitionedEdges partitionedEdges = new PartitionedEdges(new ArrayList<>(labels));
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(0,1)));
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(1,2)));
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(2,3)));
-
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(0,1,2)));
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(1,2,3)));
-
-        partitionedEdges.add_edge(new ArrayList<>(Arrays.asList(0,1,2,3,4)));
-        partitionedEdges.build_index();
-        partitionedEdges.status();
+    public List<Integer> getNodeLabels() {
+        return nodeLabels;
     }
 }

@@ -22,12 +22,19 @@ import java.util.logging.Logger;
 public class Executor {
     private static final Logger logger = Logger.getLogger(Executor.class.getName());
 
-    private final static String node_path = "src/zHGMatch/data/house-committees/node-labels-house-committees.txt";
-    private final static String edge_path = "src/zHGMatch/data/house-committees/hyperedges-house-committees.txt";
-    private final static String query_path = "src/zHGMatch/data/house-committees/query.txt";
+    private static String node_path;
+    private static String edge_path;
+    private static String query_path;
+    private final static String[] paths = {"CP"}; // "CH", "CP", "HB", "HC", "MA", "SA", "SB", "TC", "WT"
 
     public static void main(String[] args) {
-        run_query();
+        for (String dataName : paths) {
+            node_path = "src/dataset/hypergraph/" + dataName + "/node-labels.txt";
+            edge_path = "src/dataset/hypergraph/" + dataName + "/hyperedge-removeduplicate.txt";
+            query_path = "src/dataset/hypergraph/" + dataName + "/s_3_m.txt";  // m_4_m、m_6_l、s_2_m、s_3_m
+
+            run_query();
+        }
     }
 
     public static void run_query() {
@@ -50,9 +57,11 @@ public class Executor {
             if (all_plans) {
                 List<ExecutionPlan> executionPlans = new ExecutionPlan().all_plans_from_query(queryGraph);
                 driver = new MatchDriver("Query-" + i, queryGraph, executionPlans, true);
+                driver.setPrint_results(false);
             } else {
                 ExecutionPlan plan = new ExecutionPlan().from_query(queryGraph, data_graph);
                 driver = new MatchDriver("Query-" + i, queryGraph, new ArrayList<>(Arrays.asList(plan)), true);
+                driver.setPrint_results(false);
             }
 
             Pair<Integer, Long> res = driver.run(data_graph, 100);

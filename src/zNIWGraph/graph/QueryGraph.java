@@ -2,6 +2,7 @@ package zNIWGraph.graph;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import zNIWGraph.graph.util.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -10,6 +11,8 @@ import java.util.stream.IntStream;
 public class QueryGraph {
     private List<Integer> labels;
     private List<List<Integer>> edges;
+
+    private List<List<Integer>> filteredCandidates;
 
     public QueryGraph(List<Integer> labels, List<List<Integer>> edges) {
         this.labels = labels;
@@ -24,30 +27,18 @@ public class QueryGraph {
         return edges;
     }
 
+    public int getEdgeNum() {
+        return this.edges.size();
+    }
+
     public int num_nodes() {
         return this.labels.size();
     }
 
-    public static void main(String[] args) {
-        List<Integer> list = new ArrayList<>();
-        list.add(5);
-        list.add(3);
-        list.add(8);
-        list.add(3);
-        list.add(1);
-        list.add(5);
 
-        List<Integer> collect = list.stream()
-                .distinct()   // 去重
-                .sorted()     // 排序
-                .collect(Collectors.toList());
-        list = collect;
-
-        System.out.println(list);
-    }
 
     // 静态方法，用于从 JSONObject 创建 GraphData 实例
-    public static QueryGraph fromJSONObject(JSONObject obj) {
+    public static Pair<QueryGraph, NIWHypergraph> fromJSONObject(JSONObject obj) {
         JSONArray labelsArray = obj.getJSONArray("labels");
         List<Integer> labels = new ArrayList<>();
         for (int i = 0; i < labelsArray.length(); i++) {
@@ -57,16 +48,31 @@ public class QueryGraph {
         JSONArray edgesArray = obj.getJSONArray("edges");
         List<List<Integer>> edges = new ArrayList<>();
 
+        Map<Integer, List<Integer>> idToEdge = new HashMap<>();
+        Map<List<Integer>, Integer> edgeToId = new HashMap<>();
+        Map<Integer, Set<Integer>> vertexToEdges = new HashMap<>();
+
         for (int i = 0; i < edgesArray.length(); i++) {
             JSONArray edge = edgesArray.getJSONArray(i);
             List<Integer> edgeList = new ArrayList<>();
+
             for (int j = 0; j < edge.length(); j++) {
-                edgeList.add(edge.getInt(j));
+                int v = edge.getInt(j);   // 获得顶点
+                edgeList.add(v);
+                vertexToEdges.putIfAbsent(v, new HashSet<>());
+                vertexToEdges.get(v).add(i+1);
             }
+
+            Collections.sort(edgeList);
             edges.add(edgeList);
+            idToEdge.put(i+1, edgeList);
+            edgeToId.put(edgeList, i+1);
         }
 
-        return new QueryGraph(labels, edges);
+        NIWHypergraph niwHypergraph = new NIWHypergraph(idToEdge, edgeToId, vertexToEdges, labels);
+        niwHypergraph.setIfQueryGraph(true);
+
+        return new Pair(new QueryGraph(labels, edges), niwHypergraph);
     }
 
     public DynamicHyperGraph to_graph() {
@@ -150,5 +156,35 @@ public class QueryGraph {
         List<Long> sortedEdge = new ArrayList<>(edge);
         sortedEdge.sort(Long::compareTo);
         return sortedEdge;
+    }
+
+    public List<Integer> getEdge(int i) {
+        return this.edges.get(i);
+    }
+
+    public void setFilteredCandidates(List<List<Integer>> filteredCandidates) {
+        this.filteredCandidates = filteredCandidates;
+    }
+
+    public List<List<Integer>> getFilteredCandidates() {
+        return filteredCandidates;
+    }
+
+    public static void main(String[] args) {
+        List<Integer> list = new ArrayList<>();
+        list.add(5);
+        list.add(3);
+        list.add(8);
+        list.add(3);
+        list.add(1);
+        list.add(5);
+
+        List<Integer> collect = list.stream()
+                .distinct()   // 去重
+                .sorted()     // 排序
+                .collect(Collectors.toList());
+        list = collect;
+
+        System.out.println(list);
     }
 }

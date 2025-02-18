@@ -390,7 +390,7 @@ public class MatchDriver {
 
             for (List<Integer> p : secondExtended) {
                 List<List<Integer>> results = plan.getExtenders().get(2).extend(p, data_graph);
-                System.out.println("results.size(): " + results.size());
+//                System.out.println("results.size(): " + results.size());
                 if (this.print_results) {
                     for (List<Integer> result : results) {
                         System.out.println(split_results(result, plan.getResultArity()));
@@ -604,5 +604,9 @@ public class MatchDriver {
             cur += a;
         }
         return splitResults;
+    }
+
+    public void setPrint_results(boolean print_results) {
+        this.print_results = print_results;
     }
 }

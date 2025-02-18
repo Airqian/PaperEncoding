@@ -1,9 +1,8 @@
 package zNIWGraph.extend;
 
-import zNIWGraph.graph.DynamicHyperGraph;
-import zNIWGraph.graph.PartitionedEdges;
-import zNIWGraph.graph.QueryGraph;
+import zNIWGraph.graph.*;
 import zNIWGraph.graph.util.Pair;
+import zNIWGraph.index.IntersectionLabelGraph;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -53,7 +52,7 @@ public class ExecutionPlanUtils {
      * @return
      */
     public static List<List<Integer>> compute_matching_order(QueryGraph query, PartitionedEdges edges) {
-        System.out.println("%%%%%%%%%%%%%%% Computing matching order %%%%%%%%%%%%%%%");
+        System.out.println("查询开始 %%%%%%%%%%%%%%% Raw Partitioned %%%%%%%%%%%%%%%");
         DynamicHyperGraph query_graph = query.to_graph();
 
         // 获取所有查询边并按基数排序
@@ -395,6 +394,5 @@ public class ExecutionPlanUtils {
 
         return new NodeVerifier(indices, edgeNums, nodeNums, contains);
     }
-
 
 }

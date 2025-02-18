@@ -1,9 +1,12 @@
 package zNIWGraph.extend;
 
 import zNIWGraph.graph.DynamicHyperGraph;
+import zNIWGraph.graph.NIWHypergraph;
 import zNIWGraph.graph.PartitionedEdges;
 import zNIWGraph.graph.QueryGraph;
 import zNIWGraph.graph.util.Pair;
+import zNIWGraph.index.DualFilter;
+import zNIWGraph.index.IntersectionLabelGraph;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,9 +22,6 @@ public class ExecutionPlan {
     private List<Integer> resultLabels;
     private List<Integer> resultArity;
 
-    // Logger for logging information
-    private static final Logger logger = Logger.getLogger(ExecutionPlan.class.getName());
-
     public ExecutionPlan() {
 
     }
@@ -31,22 +31,6 @@ public class ExecutionPlan {
         this.extenders = extenders;
         this.resultLabels = resultLabels;
         this.resultArity = resultArity;
-    }
-
-    public List<Integer> getStartLabels() {
-        return startLabels;
-    }
-
-    public List<Extender> getExtenders() {
-        return extenders;
-    }
-
-    public List<Integer> getResultLabels() {
-        return resultLabels;
-    }
-
-    public List<Integer> getResultArity() {
-        return resultArity;
     }
 
     // 生成所有可能的匹配顺序和查询计划，数量为(#edges)!，如有六条边的话会生成6✖️5✖️4✖️3✖️2✖️1=720种匹配顺序
@@ -61,12 +45,29 @@ public class ExecutionPlan {
     }
 
     // 生成优化后的匹配顺序和查询计划，且数量都为1
-    public ExecutionPlan from_query(QueryGraph queryGraph, PartitionedEdges edges) {
+    public ExecutionPlan from_query(QueryGraph queryGraph, PartitionedEdges edges, NIWHypergraph dataNIWGraph, NIWHypergraph queryNIWGraph, IntersectionLabelGraph dataInterLabelGraph, IntersectionLabelGraph queryInterLabelGraph) {
         // 生成匹配顺序
         List<List<Integer>> order = ExecutionPlanUtils.compute_matching_order(queryGraph, edges);
 
+        // 双重过滤器
+        DualFilter dualFilter = new DualFilter(queryGraph, edges, order, dataInterLabelGraph, queryInterLabelGraph, dataNIWGraph, queryNIWGraph);
+        List<List<Integer>> filteredCandidates = dualFilter.filterCandidates();
+        queryGraph.setFilteredCandidates(filteredCandidates);
+
+        printCandidateFilteredStatus(order, filteredCandidates, queryNIWGraph);
+
         // 生成查询计划
         return this.from_query_and_order(queryGraph, order);
+    }
+
+    private void printCandidateFilteredStatus(List<List<Integer>> order, List<List<Integer>> filteredCandidates, NIWHypergraph queryNIWGraph) {
+        System.out.println("%%%%%%%%%%%%%%% After Filtering %%%%%%%%%%%%%%%");
+        int sum = 0;
+        for (int i = 0; i < order.size(); i++) {
+            sum += filteredCandidates.get(i).size();
+            System.out.println("查询超边： " + order.get(i) + " 候选集数量为：" + filteredCandidates.get(i).size());
+        }
+        System.out.println("经过双重约束过滤后查询图的候选集大小总和为:" + sum + "\n");
     }
 
     /**
@@ -267,5 +268,21 @@ public class ExecutionPlan {
         }
 
         return new ExecutionPlan(start_labels, extenders, result_labels, result_arity);
+    }
+
+    public List<Integer> getStartLabels() {
+        return startLabels;
+    }
+
+    public List<Extender> getExtenders() {
+        return extenders;
+    }
+
+    public List<Integer> getResultLabels() {
+        return resultLabels;
+    }
+
+    public List<Integer> getResultArity() {
+        return resultArity;
     }
 }

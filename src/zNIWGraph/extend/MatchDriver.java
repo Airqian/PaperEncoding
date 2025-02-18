@@ -61,7 +61,7 @@ public class MatchDriver {
         long total_time = 0l;
 
         for (int i = 0; i < this.plan.size(); i++) {
-            System.out.println("Plan " + i);
+            // System.out.println("Plan " + i);
             ExecutionPlan current_plan = this.plan.get(i);
             // 取出的是数据图中 与匹配顺序第一条边的标签相同的边集合
             EdgePartition edge_index = data_graph.get_partition(current_plan.getStartLabels());
@@ -250,7 +250,7 @@ public class MatchDriver {
 
         // ‼️‼️‼️‼️ 获取匹配顺序中第一条边的分区，且 edges 表示该分区里的全量边，也就是说对于第一条边暂时没有过滤规则
         EdgePartition edge_index = data_graph.get_partition(plan.getStartLabels());
-        System.out.println("Starting with "+ edge_index.num_edges() + " hyperedges");
+        System.out.println("The first edge starting with "+ edge_index.num_edges() + " hyperedges");
 
         List<List<Integer>> first_edge_candidate_edges = new ArrayList<>();
         for (int i = 0; i < edge_index.num_edges(); i++) {
@@ -390,7 +390,7 @@ public class MatchDriver {
 
             for (List<Integer> p : secondExtended) {
                 List<List<Integer>> results = plan.getExtenders().get(2).extend(p, data_graph);
-                System.out.println("results.size(): " + results.size());
+//                System.out.println("results.size(): " + results.size());
                 if (this.print_results) {
                     for (List<Integer> result : results) {
                         System.out.println(split_results(result, plan.getResultArity()));
@@ -604,5 +604,9 @@ public class MatchDriver {
             cur += a;
         }
         return splitResults;
+    }
+
+    public void setPrint_results(boolean print_results) {
+        this.print_results = print_results;
     }
 }

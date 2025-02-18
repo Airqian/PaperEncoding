@@ -16,20 +16,6 @@ import java.util.stream.IntStream;
  * getRowsOfNode(0) = 0 （第一条超边中包含顶点0）
  */
 public class EdgePartition {
-    public static void main(String[] args) {
-        // 下面部分测试通过
-        List<Integer> labels = new ArrayList<>(Arrays.asList(0,0,0));
-        List<Integer> edges = new ArrayList<>(Arrays.asList(2,3,4,1,2,3,2,3,5,3,4,5));
-        EdgePartition edgePartition = new EdgePartition(labels,edges);
-        edgePartition.sortEdges(true);
-        List<Integer> rowsOfNode = edgePartition.getRowsOfNode(1);
-        System.out.println(rowsOfNode.toString());
-        List<Integer> rowsOfNode1 = edgePartition.getRowsOfNode(2);
-        System.out.println(rowsOfNode1.toString());
-        List<Integer> rowsOfNode2 = edgePartition.getRowsOfNode(3);
-        System.out.println(rowsOfNode2.toString());
-    }
-
     private int arity;  // 表示该分区边的度数（超边中的顶点个数）
     private List<Integer> labels;  // 该分区的标签 [1,1,2]
     private List<Integer> edges;   // 该分区包含的超边（包含每条边的顶点id）
@@ -211,5 +197,19 @@ public class EdgePartition {
         int intSize = Integer.BYTES;
         return index.size() != 0 ? index.values().stream().mapToInt(v -> intSize * (v.size() + 3))
                 .sum() : 0;
+    }
+
+    public static void main(String[] args) {
+        // 下面部分测试通过
+        List<Integer> labels = new ArrayList<>(Arrays.asList(0,0,0));
+        List<Integer> edges = new ArrayList<>(Arrays.asList(2,3,4,1,2,3,2,3,5,3,4,5));
+        EdgePartition edgePartition = new EdgePartition(labels,edges);
+        edgePartition.sortEdges(true);
+        List<Integer> rowsOfNode = edgePartition.getRowsOfNode(1);
+        System.out.println(rowsOfNode.toString());
+        List<Integer> rowsOfNode1 = edgePartition.getRowsOfNode(2);
+        System.out.println(rowsOfNode1.toString());
+        List<Integer> rowsOfNode2 = edgePartition.getRowsOfNode(3);
+        System.out.println(rowsOfNode2.toString());
     }
 }

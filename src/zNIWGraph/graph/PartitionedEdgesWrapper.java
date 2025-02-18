@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+// 这个类没用过
 public class PartitionedEdgesWrapper {
     private List<Integer> nodeLabels;
     private List<EdgePartitionMapEntry> map;

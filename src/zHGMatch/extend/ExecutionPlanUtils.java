@@ -53,7 +53,7 @@ public class ExecutionPlanUtils {
      * @return
      */
     public static List<List<Integer>> compute_matching_order(QueryGraph query, PartitionedEdges edges) {
-        System.out.println("%%%%%%%%%%%%%%% Computing matching order %%%%%%%%%%%%%%%");
+        System.out.println("查询开始 %%%%%%%%%%%%%%% Raw partitioned %%%%%%%%%%%%%%%");
         DynamicHyperGraph query_graph = query.to_graph();
 
         // 获取所有查询边并按基数排序
